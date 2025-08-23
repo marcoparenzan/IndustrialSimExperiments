@@ -1,5 +1,6 @@
 ﻿using InductionMotorSimLib;
 using IndustrialSimLib;
+using IndustrialSimLib.SimEvents;
 using System.Globalization;
 using VFDSimLib;
 
@@ -122,7 +123,7 @@ while (simState.Time < totalTimeSec)
         idx++;
     }
 
-    simState.Time += dt;
+    simState.Step(dt);
 
     // 1) Update VFD
     vfd.Step(dt, simState);

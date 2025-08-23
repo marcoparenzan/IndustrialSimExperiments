@@ -1,4 +1,4 @@
-﻿namespace IndustrialSimLib;
+﻿namespace IndustrialSimLib.SimEvents;
 
 public class ToggleAnomalyEvent : SimEvent
 {

@@ -1,11 +1,17 @@
 ﻿using IndustrialSimLib;
 
-class SimState(Action<string, bool> toggle): ISimState
+public class SimState(Action<string, bool> toggle): ISimState
 {
-    public double Time { get; set; } = 0;
-    public bool Running { get; set; } = true;
-    public FaultCode ActiveTrip { get; set; } = FaultCode.None;
-    public List<string> EventLog { get; set; } = new();
+    public double Time { get; private set; } = 0;
+    public bool Running { get; private set; } = true;
+    public FaultCode ActiveTrip { get; private set; } = FaultCode.None;
+    public List<string> EventLog { get; private set; } = new();
+
+    public double Step(double dt)
+    {
+        Time += dt;
+        return Time;
+    }
 
     public void Trip(FaultCode fc)
     {
