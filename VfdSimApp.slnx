@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="InductionMotorLib/InductionMotorSimLib.csproj" />
+  <Project Path="IndustrialSimLib/IndustrialSimLib.csproj" />
+  <Project Path="VFDSimApp/VFDSimApp.csproj" DisplayName="VfdSimApp" />
+  <Project Path="VFDSimLib/VFDSimLib.csproj" DisplayName="VfdSimLib" />
+</Solution>
