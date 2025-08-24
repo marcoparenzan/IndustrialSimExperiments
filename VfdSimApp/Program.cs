@@ -39,8 +39,8 @@ var supplySettings = new ThreePhaseSupplySettings
     NominalFrequency = vfdSettings.RatedFrequency,
     VoltageSlewRate = 1000.0,
     FrequencySlewRate = 10.0,
-    UnderVoltPU = 0.55,
-    OverVoltPU = 1.20
+    UnderVoltPU = 0.50, // match old behavior
+    OverVoltPU = 1.25   // match old behavior
 };
 var supplyState = new ThreePhaseSupplyState
 {
