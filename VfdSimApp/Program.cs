@@ -2,10 +2,12 @@
 using IndustrialSimLib;
 using IndustrialSimLib.SimEvents;
 using System.Globalization;
+using ThreePhaseSupplySimLib;
 using VFDSimLib;
 
 CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
+// VFD settings/state as before...
 var vfdSettings = new VfdSettings
 {
     RatedVoltageLL = 400.0,
@@ -30,6 +32,25 @@ var vfdState = new VfdState
     TargetFrequency = 50
 };
 
+// Supply settings/state/io
+var supplySettings = new ThreePhaseSupplySettings
+{
+    NominalVoltageLL = vfdSettings.RatedVoltageLL,
+    NominalFrequency = vfdSettings.RatedFrequency,
+    VoltageSlewRate = 1000.0,
+    FrequencySlewRate = 10.0,
+    UnderVoltPU = 0.55,
+    OverVoltPU = 1.20
+};
+var supplyState = new ThreePhaseSupplyState
+{
+    TargetVoltageLL = supplySettings.NominalVoltageLL,
+    TargetFrequency = supplySettings.NominalFrequency
+};
+var supplyInputs = new ThreePhaseSupplyInputs();
+var supplyOutputs = new ThreePhaseSupplyOutputs { LineLineVoltage = supplySettings.NominalVoltageLL, Frequency = supplySettings.NominalFrequency };
+
+// Motor settings/state as before...
 var motorSettings = new InductionMotorSettings
 {
     RatedVoltageLL = 400.0,
@@ -61,6 +82,8 @@ var vfdOutputs = new VfdOutputs();
 var motorInputs = new InductionMotorInputs();
 var motorOutputs = new InductionMotorOutputs();
 
+// Devices
+var supply = new ThreePhaseSupply(supplySettings, supplyState, supplyInputs, supplyOutputs);
 var motor = new InductionMotor(motorSettings, motorState, motorInputs, motorOutputs);
 var vfd = new Vfd(vfdSettings, vfdState, vfdInputs, vfdOutputs);
 
@@ -84,8 +107,8 @@ var simState = new SimState((string key, bool enable)=>
 {
     switch (key.ToLowerInvariant())
     {
-        case "undervoltage": vfdState.An_UnderVoltage = enable; break;
-        case "overvoltage": vfdState.An_OverVoltage = enable; break;
+        case "undervoltage": supplyState.An_UnderVoltage = enable; break;
+        case "overvoltage": supplyState.An_OverVoltage = enable; break;
         case "phaseloss": vfdState.An_PhaseLoss = enable; motorState.An_PhaseLoss = enable; break;
         case "groundfault": vfdState.An_GroundFault = enable; break;
         case "loadjam": motorState.An_LoadJam = enable; break;
@@ -111,7 +134,12 @@ while (simState.Time < totalTimeSec)
 
     simState.Step(dt);
 
-    // 1) Update VFD
+    // 0) Update supply (grid)
+    supply.Step(dt, simState);
+
+    // 1) Update VFD (feed supply into VFD inputs)
+    vfdInputs.SupplyVoltageLL = supplyOutputs.LineLineVoltage;
+    vfdInputs.SupplyFrequency = supplyOutputs.Frequency;
     vfd.Step(dt, simState);
 
     // 2) Wire VFD outputs to motor inputs
@@ -135,7 +163,6 @@ while (simState.Time < totalTimeSec)
     }
 }
 
-// Print event log at the end
 Console.WriteLine();
 Console.WriteLine("Event log:");
 foreach (var e in simState.EventLog)
