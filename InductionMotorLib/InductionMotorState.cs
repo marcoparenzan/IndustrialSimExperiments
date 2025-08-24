@@ -2,16 +2,11 @@
 
 public class InductionMotorState
 {
-    public double OutputFrequency { get; set; }        // Hz
-    public double OutputVoltage { get; set; }          // V (fundamental rms, phase-phase approx)
-
     public double SpeedRpm { get; set; }    // rpm
     public double ElectTorque { get; set; } // Nm
-    public double PhaseCurrent { get; set; }// A
 
-    public double Trated { get; set; } // Nm
-    public double VratedPhPh { get; set; }
-
+    public double Trated { get; set; }      // Nm
+    public double VratedPhPh { get; set; }  // V (rated line-line)
 
     // Anomaly toggles
     public bool An_PhaseLoss { get; set; }

@@ -2,8 +2,8 @@
 
 public class InductionMotorSettings
 {
-    public double VratedLL { get; set; } = 400.0; // VAC
-    public double Frated { get; set; } = 50.0;    // Hz
+    public double RatedVoltageLL { get; set; } = 400.0; // VAC
+    public double RatedFrequency { get; set; } = 50.0;    // Hz
     public int PolePairs { get; set; } = 2;       // 4-pole machine
 
     // Rated / base values for a ~7.5 kW motor (approx)

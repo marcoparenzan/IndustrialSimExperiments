@@ -2,7 +2,7 @@
 
 namespace InductionMotorSimLib;
 
-public class InductionMotor(InductionMotorSettings settings, InductionMotorState state) : IDeviceSimulator
+public class InductionMotor(InductionMotorSettings settings, InductionMotorState state, InductionMotorInputs inputs, InductionMotorOutputs outputs) : IDeviceSimulator
 {
     ISimState simState;
 
@@ -11,14 +11,14 @@ public class InductionMotor(InductionMotorSettings settings, InductionMotorState
         this.simState = simState;
 
         // Handle zero/near-zero frequency (hold torque limited)
-        double f = Math.Max(0.1, Math.Abs(state.OutputFrequency));
+        double f = Math.Max(0.1, Math.Abs(inputs.DriveFrequencyCmd));
         double nSyncRpm = 60.0 * f / settings.PolePairs; // synchronous speed
 
         // Slip (simple definition)
         double slip = nSyncRpm <= 1e-3 ? 1.0 : Math.Max(0.0, (nSyncRpm - state.SpeedRpm) / nSyncRpm);
 
         // V/f ratio + low-speed boost influence torque
-        double vf_pu = (state.OutputVoltage / Math.Max(10.0, state.VratedPhPh)) / (f / Math.Max(1.0, settings.Frated));
+        double vf_pu = (inputs.DriveVoltageCmd / Math.Max(10.0, state.VratedPhPh)) / (f / Math.Max(1.0, settings.RatedFrequency));
         vf_pu = Math.Clamp(vf_pu, 0.0, 1.2);
 
         // Simplified torque model: T ~ Trated * (vf)^2 * (slip / (slip + s0)) * torque_limit
@@ -37,7 +37,7 @@ public class InductionMotor(InductionMotorSettings settings, InductionMotorState
 
         state.SpeedRpm += domega_rpm * dt;
         // Prevent running backwards in this simple model
-        if (state.SpeedRpm < 0 && state.OutputFrequency >= 0) state.SpeedRpm = 0;
+        if (state.SpeedRpm < 0 && inputs.DriveFrequencyCmd >= 0) state.SpeedRpm = 0;
 
         // Current proxy: proportional to torque demand divided by (V/f) margin
         double vf_margin = Math.Max(0.2, vf_pu);
@@ -50,10 +50,7 @@ public class InductionMotor(InductionMotorSettings settings, InductionMotorState
             T_e *= 0.6;       // torque drops
         }
 
-        // Sensor noise affects only reported speed (if someone reads it)
-        double noise = state.An_SensorNoise ? (Random.Shared.NextDouble() - 0.5) * 8.0 : 0.0; // +/- 4 rpm noise
-
         state.ElectTorque = T_e;
-        state.PhaseCurrent = I;
+        outputs.PhaseCurrent = I; // wiring output to VFD
     }
 }

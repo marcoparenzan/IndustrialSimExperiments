@@ -2,7 +2,7 @@
 
 namespace VFDSimLib;
 
-public class Vfd(VfdSettings settings, VfdState state): IDeviceSimulator
+public class Vfd(VfdSettings settings, VfdState state, VfdInputs inputs, VfdOutputs outputs): IDeviceSimulator
 {
     ISimState simState;
 
@@ -22,23 +22,23 @@ public class Vfd(VfdSettings settings, VfdState state): IDeviceSimulator
         if (!simState.Running)
         {
             ThermalStep(dt, conductionLossW: 0.0);
-            state.OutputFrequency = 0.0;
-            state.OutputVoltage = 0.0;
-            state.MotorCurrent = 0.0;
+            outputs.OutputFrequency = 0.0;
+            outputs.OutputVoltage = 0.0;
+            inputs.MotorCurrentFeedback = 0.0;
             return;
         }
 
         // Slew output frequency toward target
-        double df = state.TargetFrequency - state.OutputFrequency;
+        double df = state.TargetFrequency - outputs.OutputFrequency;
         double slew = (df >= 0 ? settings.Accel : settings.Decel) * dt;
-        if (Math.Abs(df) <= Math.Abs(slew)) state.OutputFrequency = state.TargetFrequency;
-        else state.OutputFrequency += Math.Sign(df) * Math.Abs(slew);
+        if (Math.Abs(df) <= Math.Abs(slew)) outputs.OutputFrequency = state.TargetFrequency;
+        else outputs.OutputFrequency += Math.Sign(df) * Math.Abs(slew);
 
         // V/f + boost, capped at rated voltage
-        double vf = Math.Max(0.1, state.OutputFrequency);
+        double vf = Math.Max(0.1, outputs.OutputFrequency);
         double voltCmd = settings.RatedVoltageLL * (vf / Math.Max(1.0, settings.RatedFrequency));
         double boost = settings.VoltBoost * settings.RatedVoltageLL;
-        state.OutputVoltage = Math.Min(settings.RatedVoltageLL, voltCmd + boost);
+        outputs.OutputVoltage = Math.Min(settings.RatedVoltageLL, voltCmd + boost);
     }
 
     public void Step2(double dt, ISimState simState)
@@ -46,7 +46,7 @@ public class Vfd(VfdSettings settings, VfdState state): IDeviceSimulator
         this.simState = simState;
 
         // Thermal model (very rough): inverter losses ~ 2% of V*I plus cooling to ambient
-        double lossesW = 0.02 * state.OutputVoltage * state.MotorCurrent;
+        double lossesW = 0.02 * outputs.OutputVoltage * Math.Max(0.0, inputs.MotorCurrentFeedback);
         ThermalStep(dt, lossesW);
 
         // Fault detection
@@ -70,8 +70,8 @@ public class Vfd(VfdSettings settings, VfdState state): IDeviceSimulator
         if (state.BusVoltage > settings.OverVoltPUNomDC * Math.Sqrt(2.0) * settings.RatedVoltageLL)
             simState.Trip(VfdFaultCode.OverVoltage);
 
-        // Over-current
-        if (state.MotorCurrent > settings.OverCurrentMultiple * settings.MaxCurrent)
+        // Over-current (use input feedback)
+        if (inputs.MotorCurrentFeedback > settings.OverCurrentMultiple * settings.MaxCurrent)
             simState.Trip(VfdFaultCode.OverCurrent);
 
         // Over-temperature
