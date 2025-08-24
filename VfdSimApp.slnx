@@ -1,8 +1,14 @@
 <Solution>
-  <Project Path="ConsoleApp1/ConsoleApp1.csproj" />
-  <Project Path="InductionMotorLib/InductionMotorSimLib.csproj" />
-  <Project Path="IndustrialSimLib/IndustrialSimLib.csproj" />
-  <Project Path="ThreePhaseSupplySimLib/ThreePhaseSupplySimLib.csproj" Id="dd9a9652-ef8a-46ee-bfcc-0fc29f110cd9" />
-  <Project Path="VFDSimApp/VFDSimApp.csproj" />
-  <Project Path="VFDSimLib/VFDSimLib.csproj" />
+  <Folder Name="/Libs/">
+    <Project Path="InductionMotorLib/InductionMotorSimLib.csproj" />
+    <Project Path="IndustrialSimLib/IndustrialSimLib.csproj" />
+    <Project Path="PackageSimLib/PackageSimLib.csproj" Id="8bbfa2a8-0efa-475f-9f5a-757671e1a5ca" />
+    <Project Path="ThreePhaseSupplySimLib/ThreePhaseSupplySimLib.csproj" Id="dd9a9652-ef8a-46ee-bfcc-0fc29f110cd9" />
+    <Project Path="VFDSimLib/VFDSimLib.csproj" />
+  </Folder>
+  <Folder Name="/Simulations/">
+    <Project Path="ConsoleApp1/ConsoleApp1.csproj" />
+    <Project Path="ConveyorSimApp/ConveyorSimApp.csproj" Id="a3a5c584-7360-4ab9-8abb-dc4eb5975b66" />
+    <Project Path="VFDSimApp/VFDSimApp.csproj" />
+  </Folder>
 </Solution>

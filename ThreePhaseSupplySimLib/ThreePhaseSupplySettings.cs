@@ -1,4 +1,4 @@
-namespace VFDSimLib;
+namespace ThreePhaseSupplySimLib;
 
 public class ThreePhaseSupplySettings
 {
@@ -8,8 +8,8 @@ public class ThreePhaseSupplySettings
     public double VoltageSlewRate { get; set; } = 500.0;  // V/s
     public double FrequencySlewRate { get; set; } = 10.0; // Hz/s
 
-    // Match legacy VFD behavior
+    // Match legacy VFD behavior by default
     public double UnderVoltPU { get; set; } = 0.50;   // 50% sag
     public double OverVoltPU { get; set; } = 1.25;    // 25% surge
-    public double DriftHz { get; set; } = 0.0;
+    public double DriftHz { get; set; } = 0.0;        // optional frequency drift
 }

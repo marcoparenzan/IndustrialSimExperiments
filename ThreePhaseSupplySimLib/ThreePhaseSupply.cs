@@ -1,11 +1,10 @@
 using IndustrialSimLib;
-using ThreePhaseSupplySimLib;
 
-namespace VFDSimLib;
+namespace ThreePhaseSupplySimLib;
 
 public class ThreePhaseSupply(ThreePhaseSupplySettings settings, ThreePhaseSupplyState state, ThreePhaseSupplyInputs inputs, ThreePhaseSupplyOutputs outputs) : IDeviceSimulator
 {
-    ISimState simState;
+    ISimState simState = default!;
 
     public void Step(double dt, ISimState simState)
     {

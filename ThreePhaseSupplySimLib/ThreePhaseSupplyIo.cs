@@ -2,7 +2,7 @@ namespace ThreePhaseSupplySimLib;
 
 public class ThreePhaseSupplyInputs
 {
-    // Reserved for future external commands (e.g., remote setpoints)
+    // Reserved for future external commands (remote setpoints, etc.)
 }
 
 public class ThreePhaseSupplyOutputs
