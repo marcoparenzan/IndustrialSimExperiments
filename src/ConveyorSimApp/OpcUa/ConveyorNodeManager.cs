@@ -10,10 +10,10 @@ internal sealed class ConveyorNodeManager : MyNodeManager
 
     ConveyorNodeBindings bindings;
 
-    public ConveyorNodeManager(IServerInternal server, ApplicationConfiguration configuration, ConveyorNodeBindings xxbindings, int segments)
+    public ConveyorNodeManager(IServerInternal server, ApplicationConfiguration configuration, ConveyorNodeBindings bindings, int segments)
         : base(server, configuration, "urn:ConveyorSim:NodeManager")
     {
-        bindings = xxbindings;
+        this.bindings = bindings;
         _segments = segments;
         SystemContext.NodeIdFactory = this;
     }
