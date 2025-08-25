@@ -1,3 +1,5 @@
+using IndustrialSimLib;
+
 namespace ThreePhaseSupplySimLib;
 
 public class ThreePhaseSupplyInputs
@@ -7,6 +9,6 @@ public class ThreePhaseSupplyInputs
 
 public class ThreePhaseSupplyOutputs
 {
-    public double LineLineVoltage { get; set; } // V rms
-    public double Frequency { get; set; }       // Hz
+    public DoubleBindable LineLineVoltage { get; set; } // V rms
+    public DoubleBindable Frequency { get; set; }       // Hz
 }

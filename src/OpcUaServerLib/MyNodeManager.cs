@@ -1,8 +1,10 @@
-﻿using Opc.Ua;
+﻿using IndustrialSimLib;
+using Opc.Ua;
 using Opc.Ua.Server;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -28,49 +30,8 @@ public abstract class MyNodeManager : CustomNodeManager2
             DisplayName = name,
         };
         parent.AddReference(ReferenceTypeIds.Organizes, false, folder.NodeId);
+        parent.AddChild(folder); // make it an aggregated child so FindChild works
         AddPredefinedNode(SystemContext, folder);
         return folder;
-    }
-
-    protected BaseDataVariableState AddVar<T>(NodeState parent, string name, NodeId dataType)
-    {
-        var node = new BaseDataVariableState(parent)
-        {
-            SymbolicName = name,
-            ReferenceTypeId = ReferenceTypeIds.Organizes,
-            TypeDefinitionId = VariableTypeIds.BaseDataVariableType,
-            NodeId = new NodeId($"{parent.BrowseName.Name}.{name}", NamespaceIndex),
-            BrowseName = new QualifiedName(name, NamespaceIndex),
-            DisplayName = name,
-            DataType = dataType,
-            ValueRank = ValueRanks.Scalar,
-            AccessLevel = AccessLevels.CurrentRead | AccessLevels.CurrentWrite,
-            UserAccessLevel = AccessLevels.CurrentRead | AccessLevels.CurrentWrite,
-            Value = default(T)
-        };
-        parent.AddReference(ReferenceTypeIds.Organizes, false, node.NodeId);
-        AddPredefinedNode(SystemContext, node);
-        return node;
-    }
-
-    protected BaseDataVariableState AddArrayVar<T>(NodeState parent, string name, NodeId dataType)
-    {
-        var node = new BaseDataVariableState(parent)
-        {
-            SymbolicName = name,
-            ReferenceTypeId = ReferenceTypeIds.Organizes,
-            TypeDefinitionId = VariableTypeIds.BaseDataVariableType,
-            NodeId = new NodeId($"{parent.BrowseName.Name}.{name}", NamespaceIndex),
-            BrowseName = new QualifiedName(name, NamespaceIndex),
-            DisplayName = name,
-            DataType = dataType,
-            ValueRank = ValueRanks.OneDimension,
-            AccessLevel = AccessLevels.CurrentRead,
-            UserAccessLevel = AccessLevels.CurrentRead,
-            Value = Array.Empty<T>()
-        };
-        parent.AddReference(ReferenceTypeIds.Organizes, false, node.NodeId);
-        AddPredefinedNode(SystemContext, node);
-        return node;
     }
 }

@@ -3,7 +3,7 @@ using IndustrialSimLib;
 using IndustrialSimLib.SimEvents;
 using System.Globalization;
 using ThreePhaseSupplySimLib;
-using VFDSimLib;
+using VfdSimLib;
 
 CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 

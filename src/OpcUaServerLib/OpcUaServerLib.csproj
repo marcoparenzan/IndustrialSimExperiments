@@ -10,4 +10,8 @@
 		<PackageReference Include="OPCFoundation.NetStandard.Opc.Ua" Version="1.5.376.244" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\IndustrialSimLib\IndustrialSimLib.csproj" />
+	</ItemGroup>
+
 </Project>

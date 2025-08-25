@@ -5,7 +5,7 @@
     <Project Path="OpcUaServerLib/OpcUaServerLib.csproj" Id="c980e162-eba9-4a11-b218-2289c6795d52" />
     <Project Path="PackageSimLib/PackageSimLib.csproj" Id="8bbfa2a8-0efa-475f-9f5a-757671e1a5ca" />
     <Project Path="ThreePhaseSupplySimLib/ThreePhaseSupplySimLib.csproj" Id="dd9a9652-ef8a-46ee-bfcc-0fc29f110cd9" />
-    <Project Path="VFDSimLib/VFDSimLib.csproj" />
+    <Project Path="VFDSimLib/VFDSimLib.csproj" DisplayName="VfdSimLib" />
   </Folder>
   <Folder Name="/Simulations/">
     <Project Path="ConsoleApp1/ConsoleApp1.csproj" />

@@ -4,7 +4,7 @@ using IndustrialSimLib.SimEvents;
 using PackageSimLib;
 using System.Globalization;
 using ThreePhaseSupplySimLib;
-using VFDSimLib;
+using VfdSimLib;
 using ConveyorSimApp.OpcUa; // + add this using
 using System.Diagnostics;
 using OpcUaServerLib;   // throttle timing
@@ -152,7 +152,7 @@ SimEvent[] scenario = [
 var opcBindings = new ConveyorNodeBindings();
 var opc = await MyOpcUaServerHost.StartAsync("ConveyorSim", "opc.tcp://localhost:4840/ConveyorSim", createNodeManager: (srv, conf) => {
 
-    var ns = new ConveyorNodeManager(srv, conf, opcBindings, 5);
+    var ns = new ConveyorNodeManager(srv, conf, opcBindings, supplyState, supplyOutputs, segments, packages.ToArray());
     return ns;
 
 });

@@ -2,7 +2,7 @@
 using Opc.Ua;
 using PackageSimLib;
 using ThreePhaseSupplySimLib;
-using VFDSimLib;
+using VfdSimLib;
 
 namespace ConveyorSimApp.OpcUa;
 

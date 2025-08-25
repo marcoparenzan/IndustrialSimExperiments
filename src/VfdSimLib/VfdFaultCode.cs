@@ -1,6 +1,6 @@
 ﻿using IndustrialSimLib;
 
-namespace VFDSimLib;
+namespace VfdSimLib;
 
 public record VfdFaultCode(string Code) : FaultCode(Code)
 {

@@ -12,7 +12,7 @@
 		<ProjectReference Include="..\OpcUaServerLib\OpcUaServerLib.csproj" />
 		<ProjectReference Include="..\PackageSimLib\PackageSimLib.csproj" />
 		<ProjectReference Include="..\ThreePhaseSupplySimLib\ThreePhaseSupplySimLib.csproj" />
-		<ProjectReference Include="..\VFDSimLib\VfdSimLib.csproj" />
+		<ProjectReference Include="..\VfdSimLib\VfdSimLib.csproj" />
 		<ProjectReference Include="..\IndustrialSimLib\IndustrialSimLib.csproj" />
 	</ItemGroup>
 

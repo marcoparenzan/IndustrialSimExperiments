@@ -10,7 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\InductionMotorLib\InductionMotorSimLib.csproj" />
     <ProjectReference Include="..\ThreePhaseSupplySimLib\ThreePhaseSupplySimLib.csproj" />
-    <ProjectReference Include="..\VFDSimLib\VfdSimLib.csproj" />
+    <ProjectReference Include="..\VfdSimLib\VfdSimLib.csproj" />
 	  <ProjectReference Include="..\IndustrialSimLib\IndustrialSimLib.csproj" />
   </ItemGroup>
 

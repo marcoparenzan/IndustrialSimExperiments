@@ -1,6 +1,6 @@
 ﻿using IndustrialSimLib;
 
-namespace VFDSimLib;
+namespace VfdSimLib;
 
 public class Vfd(VfdSettings settings, VfdState state, VfdInputs inputs, VfdOutputs outputs): IDeviceSimulator
 {
