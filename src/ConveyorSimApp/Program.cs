@@ -149,9 +149,10 @@ SimEvent[] scenario = [
 // ----------------------------
 // Start OPC UA server (exposes Supply + 5 segments + packages)
 // ----------------------------
+var opcBindings = new ConveyorNodeBindings();
 var opc = await MyOpcUaServerHost.StartAsync("ConveyorSim", "opc.tcp://localhost:4840/ConveyorSim", createNodeManager: (srv, conf) => {
 
-    var ns = new ConveyorNodeManager(srv, conf, 5);
+    var ns = new ConveyorNodeManager(srv, conf, opcBindings, 5);
     return ns;
 
 });
@@ -219,7 +220,7 @@ while (simState.Time < totalTimeSec)
     supply.Step(dt, simState);
 
     // Update OPC UA Supply
-    opc.Bindings.UpdateSupply(supplyState, supplyOutputs);
+    opcBindings.UpdateSupply(supplyState, supplyOutputs);
 
     // For each segment
     for (int i = 0; i < Segments; i++)
@@ -267,7 +268,7 @@ while (simState.Time < totalTimeSec)
         seg.Vfd.Step2(dt, simState);
 
         // Update OPC UA Segment
-        opc.Bindings.UpdateSegment(i, seg.VfdState, seg.VfdInputs, seg.VfdOutputs,
+        opcBindings.UpdateSegment(i, seg.VfdState, seg.VfdInputs, seg.VfdOutputs,
                                       seg.MotorState, seg.MotorInputs, seg.MotorOutputs);
     }
 
@@ -284,7 +285,7 @@ while (simState.Time < totalTimeSec)
     }
 
     // Update OPC UA packages
-    opc.Bindings.UpdatePackages(packages);
+    opcBindings.UpdatePackages(packages);
 
     // Sampled print
     if (simState.Time >= nextSample)

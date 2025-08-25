@@ -1,22 +1,19 @@
 ﻿using Opc.Ua;
 using Opc.Ua.Server;
 using OpcUaServerLib;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ConveyorSimApp.OpcUa;
 
 internal sealed class ConveyorNodeManager : MyNodeManager
 {
     private readonly int _segments;
-    public ConveyorNodeBindings Bindings { get; } = new();
 
-    public ConveyorNodeManager(IServerInternal server, ApplicationConfiguration configuration, int segments)
+    ConveyorNodeBindings bindings;
+
+    public ConveyorNodeManager(IServerInternal server, ApplicationConfiguration configuration, ConveyorNodeBindings xxbindings, int segments)
         : base(server, configuration, "urn:ConveyorSim:NodeManager")
     {
+        bindings = xxbindings;
         _segments = segments;
         SystemContext.NodeIdFactory = this;
     }
@@ -52,17 +49,17 @@ internal sealed class ConveyorNodeManager : MyNodeManager
 
         // Supply
         var supply = AddFolder(conveyor, "Supply");
-        Bindings.Supply_LineLineVoltage = AddVar<double>(supply, "LineLineVoltage", DataTypeIds.Double);
-        Bindings.Supply_Frequency = AddVar<double>(supply, "Frequency", DataTypeIds.Double);
-        Bindings.Supply_TargetVoltageLL = AddVar<double>(supply, "TargetVoltageLL", DataTypeIds.Double);
-        Bindings.Supply_TargetFrequency = AddVar<double>(supply, "TargetFrequency", DataTypeIds.Double);
-        Bindings.Supply_AnUnderVoltage = AddVar<bool>(supply, "An_UnderVoltage", DataTypeIds.Boolean);
-        Bindings.Supply_AnOverVoltage = AddVar<bool>(supply, "An_OverVoltage", DataTypeIds.Boolean);
-        Bindings.Supply_AnFrequencyDrift = AddVar<bool>(supply, "An_FrequencyDrift", DataTypeIds.Boolean);
+        bindings.Supply_LineLineVoltage = AddVar<double>(supply, "LineLineVoltage", DataTypeIds.Double);
+        bindings.Supply_Frequency = AddVar<double>(supply, "Frequency", DataTypeIds.Double);
+        bindings.Supply_TargetVoltageLL = AddVar<double>(supply, "TargetVoltageLL", DataTypeIds.Double);
+        bindings.Supply_TargetFrequency = AddVar<double>(supply, "TargetFrequency", DataTypeIds.Double);
+        bindings.Supply_AnUnderVoltage = AddVar<bool>(supply, "An_UnderVoltage", DataTypeIds.Boolean);
+        bindings.Supply_AnOverVoltage = AddVar<bool>(supply, "An_OverVoltage", DataTypeIds.Boolean);
+        bindings.Supply_AnFrequencyDrift = AddVar<bool>(supply, "An_FrequencyDrift", DataTypeIds.Boolean);
 
         // Segments
         var segments = AddFolder(conveyor, "Segments");
-        Bindings.Segments = new ConveyorNodeBindings.SegmentBinding[_segments];
+        bindings.Segments = new ConveyorNodeBindings.SegmentBinding[_segments];
         for (int i = 0; i < _segments; i++)
         {
             var seg = AddFolder(segments, $"Segment{i}");
@@ -108,16 +105,16 @@ internal sealed class ConveyorNodeManager : MyNodeManager
                 MotOut_PhaseCurrent = AddVar<double>(motOut, "PhaseCurrent", DataTypeIds.Double),
             };
 
-            Bindings.Segments[i] = sb;
+            bindings.Segments[i] = sb;
         }
 
         // Packages
         var pkgs = AddFolder(conveyor, "Packages");
-        Bindings.Pkg_Count = AddVar<int>(pkgs, "Count", DataTypeIds.Int32);
-        Bindings.Pkg_Positions = AddArrayVar<double>(pkgs, "Positions", DataTypeIds.Double);
-        Bindings.Pkg_Masses = AddArrayVar<double>(pkgs, "Masses", DataTypeIds.Double);
+        bindings.Pkg_Count = AddVar<int>(pkgs, "Count", DataTypeIds.Int32);
+        bindings.Pkg_Positions = AddArrayVar<double>(pkgs, "Positions", DataTypeIds.Double);
+        bindings.Pkg_Masses = AddArrayVar<double>(pkgs, "Masses", DataTypeIds.Double);
 
         // Save context for ClearChangeMasks
-        Bindings.Ctx = SystemContext;
+        bindings.Ctx = SystemContext;
     }
 }

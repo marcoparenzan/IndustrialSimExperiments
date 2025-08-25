@@ -1,11 +1,6 @@
 ﻿using InductionMotorSimLib;
 using Opc.Ua;
 using PackageSimLib;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using ThreePhaseSupplySimLib;
 using VFDSimLib;
 
@@ -13,62 +8,62 @@ namespace ConveyorSimApp.OpcUa;
 
 public sealed class ConveyorNodeBindings
 {
-    internal ISystemContext Ctx = default!;
+    internal ISystemContext Ctx { get; set; }
 
     // Supply
-    public BaseDataVariableState Supply_LineLineVoltage = default!;
-    public BaseDataVariableState Supply_Frequency = default!;
-    public BaseDataVariableState Supply_TargetVoltageLL = default!;
-    public BaseDataVariableState Supply_TargetFrequency = default!;
-    public BaseDataVariableState Supply_AnUnderVoltage = default!;
-    public BaseDataVariableState Supply_AnOverVoltage = default!;
-    public BaseDataVariableState Supply_AnFrequencyDrift = default!;
+    public BaseDataVariableState Supply_LineLineVoltage { get; set; }
+    public BaseDataVariableState Supply_Frequency { get; set; }
+    public BaseDataVariableState Supply_TargetVoltageLL { get; set; }
+    public BaseDataVariableState Supply_TargetFrequency { get; set; }
+    public BaseDataVariableState Supply_AnUnderVoltage { get; set; }
+    public BaseDataVariableState Supply_AnOverVoltage { get; set; }
+    public BaseDataVariableState Supply_AnFrequencyDrift { get; set; }
 
     // Per-segment bindings
     public sealed class SegmentBinding
     {
         // VFD State
-        public BaseDataVariableState Vfd_TargetFrequency = default!;
-        public BaseDataVariableState Vfd_BusVoltage = default!;
-        public BaseDataVariableState Vfd_HeatsinkTemp = default!;
-        public BaseDataVariableState Vfd_AnUnderVoltage = default!;
-        public BaseDataVariableState Vfd_AnOverVoltage = default!;
-        public BaseDataVariableState Vfd_AnPhaseLoss = default!;
-        public BaseDataVariableState Vfd_AnGroundFault = default!;
+        public BaseDataVariableState Vfd_TargetFrequency { get; set; }
+        public BaseDataVariableState Vfd_BusVoltage { get; set; }
+        public BaseDataVariableState Vfd_HeatsinkTemp { get; set; }
+        public BaseDataVariableState Vfd_AnUnderVoltage { get; set; }
+        public BaseDataVariableState Vfd_AnOverVoltage { get; set; }
+        public BaseDataVariableState Vfd_AnPhaseLoss { get; set; }
+        public BaseDataVariableState Vfd_AnGroundFault { get; set; }
 
         // VFD Inputs
-        public BaseDataVariableState VfdIn_SupplyVoltageLL = default!;
-        public BaseDataVariableState VfdIn_SupplyFrequency = default!;
-        public BaseDataVariableState VfdIn_MotorCurrentFeedback = default!;
+        public BaseDataVariableState VfdIn_SupplyVoltageLL { get; set; }
+        public BaseDataVariableState VfdIn_SupplyFrequency { get; set; }
+        public BaseDataVariableState VfdIn_MotorCurrentFeedback { get; set; }
 
         // VFD Outputs
-        public BaseDataVariableState VfdOut_OutputFrequency = default!;
-        public BaseDataVariableState VfdOut_OutputVoltage = default!;
+        public BaseDataVariableState VfdOut_OutputFrequency { get; set; }
+        public BaseDataVariableState VfdOut_OutputVoltage { get; set; }
 
         // Motor State
-        public BaseDataVariableState Mot_SpeedRpm = default!;
-        public BaseDataVariableState Mot_ElectTorque = default!;
-        public BaseDataVariableState Mot_Trated = default!;
-        public BaseDataVariableState Mot_VratedPhPh = default!;
-        public BaseDataVariableState Mot_AnPhaseLoss = default!;
-        public BaseDataVariableState Mot_AnLoadJam = default!;
-        public BaseDataVariableState Mot_AnBearingWear = default!;
-        public BaseDataVariableState Mot_AnSensorNoise = default!;
+        public BaseDataVariableState Mot_SpeedRpm { get; set; }
+        public BaseDataVariableState Mot_ElectTorque { get; set; }
+        public BaseDataVariableState Mot_Trated { get; set; }
+        public BaseDataVariableState Mot_VratedPhPh { get; set; }
+        public BaseDataVariableState Mot_AnPhaseLoss { get; set; }
+        public BaseDataVariableState Mot_AnLoadJam { get; set; }
+        public BaseDataVariableState Mot_AnBearingWear { get; set; }
+        public BaseDataVariableState Mot_AnSensorNoise { get; set; }
 
         // Motor Inputs
-        public BaseDataVariableState MotIn_DriveFrequencyCmd = default!;
-        public BaseDataVariableState MotIn_DriveVoltageCmd = default!;
+        public BaseDataVariableState MotIn_DriveFrequencyCmd { get; set; }
+        public BaseDataVariableState MotIn_DriveVoltageCmd { get; set; }
 
         // Motor Outputs
-        public BaseDataVariableState MotOut_PhaseCurrent = default!;
+        public BaseDataVariableState MotOut_PhaseCurrent { get; set; }
     }
 
-    public SegmentBinding[] Segments = default!;
+    public SegmentBinding[] Segments { get; set; }
 
     // Packages
-    public BaseDataVariableState Pkg_Count = default!;
-    public BaseDataVariableState Pkg_Positions = default!; // double[]
-    public BaseDataVariableState Pkg_Masses = default!;    // double[]
+    public BaseDataVariableState Pkg_Count { get; set; }
+    public BaseDataVariableState Pkg_Positions { get; set; } // double[]
+    public BaseDataVariableState Pkg_Masses { get; set; }    // double[]
 
     public void UpdateSupply(ThreePhaseSupplyState st, ThreePhaseSupplyOutputs outs)
     {
