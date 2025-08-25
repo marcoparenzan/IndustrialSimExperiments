@@ -6,7 +6,8 @@ using System.Globalization;
 using ThreePhaseSupplySimLib;
 using VFDSimLib;
 using ConveyorSimApp.OpcUa; // + add this using
-using System.Diagnostics;   // throttle timing
+using System.Diagnostics;
+using OpcUaServerLib;   // throttle timing
 
 CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
@@ -148,7 +149,12 @@ SimEvent[] scenario = [
 // ----------------------------
 // Start OPC UA server (exposes Supply + 5 segments + packages)
 // ----------------------------
-var opc = await ConveyorOpcUaServerHost.StartAsync(Segments);
+var opc = await MyOpcUaServerHost.StartAsync("ConveyorSim", "opc.tcp://localhost:4840/ConveyorSim", createNodeManager: (srv, conf) => {
+
+    var ns = new ConveyorNodeManager(srv, conf, 5);
+    return ns;
+
+});
 
 // ----------------------------
 // Simulation timing controls
