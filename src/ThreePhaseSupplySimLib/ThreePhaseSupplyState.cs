@@ -9,7 +9,7 @@ public class ThreePhaseSupplyState
     public DoubleBindable TargetFrequency { get; set; } // Hz
 
     // Anomaly toggles
-    public Bindable<bool> An_UnderVoltage { get; set; }
-    public Bindable<bool> An_OverVoltage { get; set; }
-    public Bindable<bool> An_FrequencyDrift { get; set; }
+    public BoolBindable An_UnderVoltage { get; set; }
+    public BoolBindable An_OverVoltage { get; set; }
+    public BoolBindable An_FrequencyDrift { get; set; }
 }

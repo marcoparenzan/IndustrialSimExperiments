@@ -1,4 +1,5 @@
-﻿using Opc.Ua;
+﻿using IndustrialSimLib;
+using Opc.Ua;
 using Opc.Ua.Server;
 
 namespace OpcUaServerLib;

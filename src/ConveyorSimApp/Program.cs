@@ -1,13 +1,15 @@
-﻿using InductionMotorSimLib;
+﻿using ConveyorSimApp.Models;   // throttle timing
+using ConveyorSimApp.OpcUa; // + add this using
+using InductionMotorSimLib;
 using IndustrialSimLib;
 using IndustrialSimLib.SimEvents;
+using Opc.Ua;
+using OpcUaServerLib;
 using PackageSimLib;
+using System.Diagnostics;
 using System.Globalization;
 using ThreePhaseSupplySimLib;
 using VfdSimLib;
-using ConveyorSimApp.OpcUa; // + add this using
-using System.Diagnostics;
-using OpcUaServerLib;   // throttle timing
 
 CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
@@ -15,18 +17,17 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 // Conveyor configuration
 // ----------------------------
 const int Segments = 5;
-const double ConveyorLengthM = 50.0;
-const double SegmentLengthM = ConveyorLengthM / Segments;
+double ConveyorLengthM = 50.0;
+double SegmentLengthM = ConveyorLengthM / Segments;
 
 // Mechanics per segment (motor -> gearbox -> pulley)
 // motor RPM -> belt speed: v = (2π * rpm / 60) * (PulleyRadius / GearRatio)
-const double PulleyRadiusM = 0.15; // 300 mm diameter drum
-const double GearRatio = 12.0;     // motor:drum speed ratio
-const double MechEfficiency = 0.9; // mechanical efficiency motor→belt
-const double MuRoll = 0.03;        // rolling resistance coeff
+double PulleyRadiusM = 0.15; // 300 mm diameter drum
+double GearRatio = 12.0;     // motor:drum speed ratio
+double MechEfficiency = 0.9; // mechanical efficiency motor→belt
+double MuRoll = 0.03;        // rolling resistance coeff
 
 // Package generation
-var rand = new Random(123);
 double packageSpawnPeriod = 1.0; // s
 double nextSpawn = 0.0;
 
@@ -149,10 +150,10 @@ SimEvent[] scenario = [
 // ----------------------------
 // Start OPC UA server (exposes Supply + 5 segments + packages)
 // ----------------------------
-var opcBindings = new ConveyorNodeBindings();
+ConveyorNodeManager ns = default;
 var opc = await MyOpcUaServerHost.StartAsync("ConveyorSim", "opc.tcp://localhost:4840/ConveyorSim", createNodeManager: (srv, conf) => {
 
-    var ns = new ConveyorNodeManager(srv, conf, opcBindings, supplyState, supplyOutputs, segments, packages.ToArray());
+    ns = new ConveyorNodeManager(srv, conf, supplyState, supplyOutputs, segments, packages.ToArray());
     ns.SystemContext.NodeIdFactory = ns;
     return ns;
 
@@ -209,7 +210,7 @@ while (simState.Time < totalTimeSec)
         packages.Add(new Package
         {
             PositionM = 0.0,
-            MassKg = 0.5 + rand.NextDouble() * (20.0 - 0.5)
+            MassKg = 0.5 + Random.Shared.NextDouble() * (20.0 - 0.5)
         });
         nextSpawn += packageSpawnPeriod;
     }
@@ -221,7 +222,7 @@ while (simState.Time < totalTimeSec)
     supply.Step(dt, simState);
 
     // Update OPC UA Supply
-    opcBindings.UpdateSupply(supplyState, supplyOutputs);
+    UpdateSupply(supplyState, supplyOutputs);
 
     // For each segment
     for (int i = 0; i < Segments; i++)
@@ -269,8 +270,7 @@ while (simState.Time < totalTimeSec)
         seg.Vfd.Step2(dt, simState);
 
         // Update OPC UA Segment
-        opcBindings.UpdateSegment(i, seg.VfdState, seg.VfdInputs, seg.VfdOutputs,
-                                      seg.MotorState, seg.MotorInputs, seg.MotorOutputs);
+        UpdateSegment(seg.VfdState, seg.VfdInputs, seg.VfdOutputs, seg.MotorState, seg.MotorInputs, seg.MotorOutputs);
     }
 
     // Move packages along belt
@@ -286,7 +286,7 @@ while (simState.Time < totalTimeSec)
     }
 
     // Update OPC UA packages
-    opcBindings.UpdatePackages(packages);
+    UpdatePackages(packages);
 
     // Sampled print
     if (simState.Time >= nextSample)
@@ -313,16 +313,15 @@ await opc.StopAsync();
 // ----------------------------
 // Helpers & types
 // ----------------------------
-static double BeltSpeedFromRpm(double rpm) =>
-    (2.0 * Math.PI * rpm / 60.0) * (PulleyRadiusM / GearRatio); // m/s
+double BeltSpeedFromRpm(double rpm) => (2.0 * Math.PI * rpm / 60.0) * (PulleyRadiusM / GearRatio); // m/s
 
-static void PrintHeader()
+void PrintHeader()
 {
     Console.WriteLine("time    seg  f_out(Hz)  V_out(V)   I(A)   rpm    v_belt(m/s)  pkgs  T_hs(°C)  Vdc(V)  RUN Trip");
     Console.WriteLine(new string('-', 110));
 }
 
-static void PrintStatus(double t, Segment[] segs, List<Package> pkgs)
+void PrintStatus(double t, Segment[] segs, List<Package> pkgs)
 {
     for (int i = 0; i < segs.Length; i++)
     {
@@ -346,33 +345,60 @@ static void PrintStatus(double t, Segment[] segs, List<Package> pkgs)
     }
 }
 
-sealed class Segment
+void UpdateSupply(ThreePhaseSupplyState st, ThreePhaseSupplyOutputs outs)
 {
-    public int Index { get; set; }
-    public double StartM { get; set; }
-    public double EndM { get; set; }
+    ns.UpdateDoubleBindable(outs.LineLineVoltage);
+    ns.UpdateDoubleBindable(outs.Frequency);
+    ns.UpdateDoubleBindable(st.TargetVoltageLL);
+    ns.UpdateDoubleBindable(st.TargetFrequency);
+    ns.UpdateBoolBindable(st.An_UnderVoltage);
+    ns.UpdateBoolBindable(st.An_OverVoltage);
+    ns.UpdateBoolBindable(st.An_FrequencyDrift);
+}
 
-    public Vfd Vfd { get; set; }
-    public VfdState VfdState { get; set; }
-    public VfdInputs VfdInputs { get; set; }
-    public VfdOutputs VfdOutputs { get; set; }
+void UpdateSegment(VfdState vfdState, VfdInputs vfdIn, VfdOutputs vfdOut, InductionMotorState motState, InductionMotorInputs motIn, InductionMotorOutputs motOut)
+{
+    // VFD state
+    ns.UpdateDoubleBindable(vfdState.TargetFrequency);
+    ns.UpdateDoubleBindable(vfdState.BusVoltage);
+    ns.UpdateDoubleBindable(vfdState.HeatsinkTemp);
+    ns.UpdateBoolBindable(vfdState.An_UnderVoltage);
+    ns.UpdateBoolBindable(vfdState.An_OverVoltage);
+    ns.UpdateBoolBindable(vfdState.An_PhaseLoss);
+    ns.UpdateBoolBindable(vfdState.An_GroundFault);
 
-    public InductionMotor Motor { get; set; }
-    public InductionMotorState MotorState { get; set; }
-    public InductionMotorSettings MotorSettings { get; set; }
-    public InductionMotorInputs MotorInputs { get; set; }
-    public InductionMotorOutputs MotorOutputs { get; set; }
+    // VFD IO
+    ns.UpdateDoubleBindable(vfdIn.SupplyVoltageLL);
+    ns.UpdateDoubleBindable(vfdIn.SupplyFrequency);
+    ns.UpdateDoubleBindable(vfdIn.MotorCurrentFeedback);
+    ns.UpdateDoubleBindable(vfdOut.OutputFrequency);
+    ns.UpdateDoubleBindable(vfdOut.OutputVoltage);
 
-    public double BaseConstTorque { get; set; }
-    public double LastBeltSpeed { get; set; }
+    // Motor state
+    ns.UpdateDoubleBindable(motState.SpeedRpm);
+    ns.UpdateDoubleBindable(motState.ElectTorque);
+    ns.UpdateDoubleBindable(motState.Trated);
+    ns.UpdateDoubleBindable(motState.VratedPhPh);
+    ns.UpdateBoolBindable(motState.An_PhaseLoss);
+    ns.UpdateBoolBindable(motState.An_LoadJam);
+    ns.UpdateBoolBindable(motState.An_BearingWear);
+    ns.UpdateBoolBindable(motState.An_SensorNoise);
 
-    public bool Running { get; set; } = true; // In this model, simState.Running is global; segments can still log trips
-    public string Trip => FaultToString();
+    // Motor IO
+    ns.UpdateDoubleBindable(motIn.DriveFrequencyCmd);
+    ns.UpdateDoubleBindable(motIn.DriveVoltageCmd);
+    ns.UpdateDoubleBindable(motOut.PhaseCurrent);
+}
 
-    private string FaultToString()
-    {
-        // Here we don’t keep per-segment fault code; rely on event log/global if needed.
-        // Extend this if you add per-segment fault tracking.
-        return "";
-    }
+void UpdatePackages(IReadOnlyList<Package> pkgs)
+{
+    var positions = pkgs.Select(p => p.PositionM).ToArray();
+    var masses = pkgs.Select(p => p.MassKg).ToArray();
+    //Pkg_Count.Value = pkgs.Count;
+    //Pkg_Positions.Value = positions;
+    //Pkg_Masses.Value = masses;
+
+    //Pkg_Count.ClearChangeMasks(Ctx, false);
+    //Pkg_Positions.ClearChangeMasks(Ctx, false);
+    //Pkg_Masses.ClearChangeMasks(Ctx, false);
 }

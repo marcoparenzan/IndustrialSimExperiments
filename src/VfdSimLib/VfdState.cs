@@ -10,8 +10,8 @@ public class VfdState
     public DoubleBindable  VdcNom { get; set; }
 
     // Anomaly toggles
-    public Bindable<bool> An_UnderVoltage { get; set; }
-    public Bindable<bool> An_OverVoltage { get; set; }
-    public Bindable<bool> An_PhaseLoss { get; set; }
-    public Bindable<bool> An_GroundFault { get; set; }
+    public BoolBindable An_UnderVoltage { get; set; }
+    public BoolBindable An_OverVoltage { get; set; }
+    public BoolBindable An_PhaseLoss { get; set; }
+    public BoolBindable An_GroundFault { get; set; }
 }

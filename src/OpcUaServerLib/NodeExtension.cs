@@ -6,7 +6,7 @@ namespace OpcUaServerLib;
 
 public static class NodeExtension
 {
-    public static BaseDataVariableState AddVar<T>(this NodeState parent, string name, NodeId? dataType = default)
+    public static NodeState AddVar<T>(this NodeState parent, string name, NodeId? dataType = default)
     {
         var node = new BaseDataVariableState(parent)
         {
@@ -24,7 +24,7 @@ public static class NodeExtension
         };
         parent.AddReference(ReferenceTypeIds.Organizes, false, node.NodeId);
         parent.AddChild(node); // ensure it’s visible to FindChild
-        //AddPredefinedNode(SystemContext, node);
+
         return node;
     }
 
@@ -52,38 +52,41 @@ public static class NodeExtension
         };
     }
 
-    public static BaseDataVariableState AddVar<TTarget, TProperty>(this NodeState parent, TTarget target, Expression<Func<TTarget, IBindable<TProperty>>> selector, NodeId? dataType = default)
+    public static NodeState AddVar<TTarget, TProperty>(this NodeState parent, TTarget target, Expression<Func<TTarget, IBindable<TProperty>>> selector, NodeId? dataType = default)
     {
-        var name = NameOf(selector);
+        var memberExpr = MemberExpressionOf(selector);
+        var name = memberExpr.Member.Name;
 
         var state = AddVar<TProperty>(parent, name, dataType);
 
         var bindable = selector.Compile()(target);
         bindable.Bounded = state;
 
-        return state;
+        memberExpr.Member
+            .DeclaringType!
+            .GetProperty(name)!
+            .SetValue(target, bindable);
+
+        return parent;
     }
 
-    private static string NameOf<TTarget, TProperty>(Expression<Func<TTarget, IBindable<TProperty>>> selector)
+    private static MemberExpression MemberExpressionOf<TTarget, TProperty>(Expression<Func<TTarget, IBindable<TProperty>>> selector)
     {
-        var name = "";
         if (selector.Body is MemberExpression memberExpr)
         {
-            name = memberExpr.Member.Name;
+            return memberExpr;
         }
         else if (selector.Body is UnaryExpression unaryExpr && unaryExpr.Operand is MemberExpression memberExpr2)
         {
-            name = memberExpr2.Member.Name;
+            return memberExpr2;
         }
         else
         {
             throw new ArgumentException("Selector must be a member expression", nameof(selector));
         }
-
-        return name;
     }
 
-    public static BaseDataVariableState AddArrayVar<T>(this NodeState parent, string name, NodeId? dataType = default)
+    public static NodeState AddArrayVar<T>(this NodeState parent, string name, NodeId? dataType = default)
     {
         var node = new BaseDataVariableState(parent)
         {
@@ -101,8 +104,8 @@ public static class NodeExtension
         };
         parent.AddReference(ReferenceTypeIds.Organizes, false, node.NodeId);
         parent.AddChild(node); // ensure it’s visible to FindChild
-        //AddPredefinedNode(SystemContext, node);
-        return node;
+
+        return parent;
     }
 
     //public static BaseDataVariableState AddArrayVar<TTarget, TProperty>(this NodeState parent, TTarget[] target, Expression<Func<TTarget, IBindable<TProperty>>> selector, NodeId dataType)
@@ -117,7 +120,8 @@ public static class NodeExtension
 
     //    return state;
     //}
-    public static FolderState AddFolder(this NodeState parent, string name)
+
+    public static NodeState AddFolder(this NodeState parent, string name)
     {
         var folder = new FolderState(parent)
         {
@@ -132,5 +136,4 @@ public static class NodeExtension
         parent.AddChild(folder); // make it an aggregated child so FindChild works
         return folder;
     }
-
 }

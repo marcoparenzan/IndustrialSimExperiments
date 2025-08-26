@@ -11,8 +11,8 @@ public class InductionMotorState
     public DoubleBindable VratedPhPh { get; set; }  // V (rated line-line)
 
     // Anomaly toggles
-    public Bindable<bool> An_PhaseLoss { get; set; }
-    public Bindable<bool> An_LoadJam { get; set; }
-    public Bindable<bool> An_BearingWear { get; set; }
-    public Bindable<bool> An_SensorNoise { get; set; }
+    public BoolBindable An_PhaseLoss { get; set; }
+    public BoolBindable An_LoadJam { get; set; }
+    public BoolBindable An_BearingWear { get; set; }
+    public BoolBindable An_SensorNoise { get; set; }
 }
