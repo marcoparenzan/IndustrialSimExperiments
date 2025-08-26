@@ -153,6 +153,7 @@ var opcBindings = new ConveyorNodeBindings();
 var opc = await MyOpcUaServerHost.StartAsync("ConveyorSim", "opc.tcp://localhost:4840/ConveyorSim", createNodeManager: (srv, conf) => {
 
     var ns = new ConveyorNodeManager(srv, conf, opcBindings, supplyState, supplyOutputs, segments, packages.ToArray());
+    ns.SystemContext.NodeIdFactory = ns;
     return ns;
 
 });

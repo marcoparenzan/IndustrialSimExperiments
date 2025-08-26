@@ -1,12 +1,6 @@
 ﻿using IndustrialSimLib;
 using Opc.Ua;
-using Org.BouncyCastle.Utilities.Collections;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace OpcUaServerLib;
 
@@ -123,5 +117,20 @@ public static class NodeExtension
 
     //    return state;
     //}
+    public static FolderState AddFolder(this NodeState parent, string name)
+    {
+        var folder = new FolderState(parent)
+        {
+            SymbolicName = name,
+            ReferenceTypeId = ReferenceTypeIds.Organizes,
+            TypeDefinitionId = ObjectTypeIds.FolderType,
+            NodeId = new NodeId($"{parent.BrowseName.Name}.{name}", parent.BrowseName.NamespaceIndex),
+            BrowseName = new QualifiedName(name, parent.BrowseName.NamespaceIndex),
+            DisplayName = name,
+        };
+        parent.AddReference(ReferenceTypeIds.Organizes, false, folder.NodeId);
+        parent.AddChild(folder); // make it an aggregated child so FindChild works
+        return folder;
+    }
 
 }

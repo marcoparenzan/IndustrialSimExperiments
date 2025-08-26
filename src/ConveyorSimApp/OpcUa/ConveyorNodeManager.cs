@@ -7,7 +7,7 @@ using ThreePhaseSupplySimLib;
 
 namespace ConveyorSimApp.OpcUa;
 
-internal sealed class ConveyorNodeManager : MyNodeManager
+internal sealed class ConveyorNodeManager : CustomNodeManager2
 {
     ThreePhaseSupplyState supplyState;
     ThreePhaseSupplyOutputs supplyOutputs;
@@ -57,7 +57,7 @@ internal sealed class ConveyorNodeManager : MyNodeManager
         AddPredefinedNode(SystemContext, conveyor);
 
         // Supply
-        var supply = AddFolder(conveyor, "Supply");
+        var supply = conveyor.AddFolder("Supply");
         bindings.Supply_LineLineVoltage = supply.AddVar(supplyOutputs, xx => xx.LineLineVoltage);
         bindings.Supply_Frequency = supply.AddVar(supplyOutputs, xx => xx.Frequency);
         bindings.Supply_TargetVoltageLL = supply.AddVar(supplyState, xx => xx.TargetVoltageLL);
@@ -67,21 +67,21 @@ internal sealed class ConveyorNodeManager : MyNodeManager
         bindings.Supply_AnFrequencyDrift = supply.AddVar(supplyState, xx => xx.An_FrequencyDrift);
 
         // Segments
-        var segments = AddFolder(conveyor, "Segments");
+        var segments = conveyor.AddFolder("Segments");
         bindings.Segments = new ConveyorNodeBindings.SegmentBinding[this.segments.Length];
         for (int i = 0; i < this.segments.Length; i++)
         {
             var segmentObject = this.segments[i];
-            var seg = AddFolder(segments, $"Segment[{i}]");
-            var vfd = AddFolder(seg, "Vfd");
-            var vfdState = AddFolder(vfd, "State");
-            var vfdIn = AddFolder(vfd, "Inputs");
-            var vfdOut = AddFolder(vfd, "Outputs");
+            var seg = segments.AddFolder($"Segment[{i}]");
+            var vfd = seg.AddFolder("Vfd");
+            var vfdState = vfd.AddFolder("State");
+            var vfdIn = vfd.AddFolder("Inputs");
+            var vfdOut = vfd.AddFolder("Outputs");
 
-            var mot = AddFolder(seg, "Motor");
-            var motState = AddFolder(mot, "State");
-            var motIn = AddFolder(mot, "Inputs");
-            var motOut = AddFolder(mot, "Outputs");
+            var mot = seg.AddFolder("Motor");
+            var motState = mot.AddFolder("State");
+            var motIn = mot.AddFolder("Inputs");
+            var motOut = mot.AddFolder("Outputs");
 
             var sb = new ConveyorNodeBindings.SegmentBinding
             {
@@ -119,7 +119,7 @@ internal sealed class ConveyorNodeManager : MyNodeManager
         }
 
         // Packages
-        var pkgs = AddFolder(conveyor, "Packages");
+        var pkgs = conveyor.AddFolder("Packages");
         bindings.Pkg_Count = pkgs.AddVar<int>("Count", DataTypeIds.Int32);
         bindings.Pkg_Positions = pkgs.AddArrayVar<double>("Positions");
         bindings.Pkg_Masses = pkgs.AddArrayVar<double>("Masses");
