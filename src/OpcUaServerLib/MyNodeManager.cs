@@ -31,7 +31,6 @@ public abstract class MyNodeManager : CustomNodeManager2
         };
         parent.AddReference(ReferenceTypeIds.Organizes, false, folder.NodeId);
         parent.AddChild(folder); // make it an aggregated child so FindChild works
-        AddPredefinedNode(SystemContext, folder);
         return folder;
     }
 }

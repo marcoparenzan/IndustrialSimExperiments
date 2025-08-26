@@ -90,35 +90,35 @@ public sealed class ConveyorNodeBindings
         var s = Segments[i];
 
         // VFD state
-        s.Vfd_TargetFrequency.Value = vfdState.TargetFrequency;
-        s.Vfd_BusVoltage.Value = vfdState.BusVoltage;
-        s.Vfd_HeatsinkTemp.Value = vfdState.HeatsinkTemp;
-        s.Vfd_AnUnderVoltage.Value = vfdState.An_UnderVoltage;
-        s.Vfd_AnOverVoltage.Value = vfdState.An_OverVoltage;
-        s.Vfd_AnPhaseLoss.Value = vfdState.An_PhaseLoss;
-        s.Vfd_AnGroundFault.Value = vfdState.An_GroundFault;
+        s.Vfd_TargetFrequency.Value = (double) vfdState.TargetFrequency;
+        s.Vfd_BusVoltage.Value = (double)vfdState.BusVoltage;
+        s.Vfd_HeatsinkTemp.Value = (double)vfdState.HeatsinkTemp;
+        s.Vfd_AnUnderVoltage.Value = (bool) vfdState.An_UnderVoltage;
+        s.Vfd_AnOverVoltage.Value = (bool)vfdState.An_OverVoltage;
+        s.Vfd_AnPhaseLoss.Value = (bool)vfdState.An_PhaseLoss;
+        s.Vfd_AnGroundFault.Value = (bool)vfdState.An_GroundFault;
 
         // VFD IO
-        s.VfdIn_SupplyVoltageLL.Value = vfdIn.SupplyVoltageLL;
-        s.VfdIn_SupplyFrequency.Value = vfdIn.SupplyFrequency;
-        s.VfdIn_MotorCurrentFeedback.Value = vfdIn.MotorCurrentFeedback;
-        s.VfdOut_OutputFrequency.Value = vfdOut.OutputFrequency;
-        s.VfdOut_OutputVoltage.Value = vfdOut.OutputVoltage;
+        s.VfdIn_SupplyVoltageLL.Value = (double)vfdIn.SupplyVoltageLL;
+        s.VfdIn_SupplyFrequency.Value = (double)vfdIn.SupplyFrequency;
+        s.VfdIn_MotorCurrentFeedback.Value = (double)vfdIn.MotorCurrentFeedback;
+        s.VfdOut_OutputFrequency.Value = (double)vfdOut.OutputFrequency;
+        s.VfdOut_OutputVoltage.Value = (double)vfdOut.OutputVoltage;
 
         // Motor state
-        s.Mot_SpeedRpm.Value = motState.SpeedRpm;
-        s.Mot_ElectTorque.Value = motState.ElectTorque;
-        s.Mot_Trated.Value = motState.Trated;
-        s.Mot_VratedPhPh.Value = motState.VratedPhPh;
-        s.Mot_AnPhaseLoss.Value = motState.An_PhaseLoss;
-        s.Mot_AnLoadJam.Value = motState.An_LoadJam;
-        s.Mot_AnBearingWear.Value = motState.An_BearingWear;
-        s.Mot_AnSensorNoise.Value = motState.An_SensorNoise;
+        s.Mot_SpeedRpm.Value = (double)motState.SpeedRpm;
+        s.Mot_ElectTorque.Value = (double)motState.ElectTorque;
+        s.Mot_Trated.Value = (double)motState.Trated;
+        s.Mot_VratedPhPh.Value = (double)motState.VratedPhPh;
+        s.Mot_AnPhaseLoss.Value = (bool)motState.An_PhaseLoss;
+        s.Mot_AnLoadJam.Value = (bool)motState.An_LoadJam;
+        s.Mot_AnBearingWear.Value = (bool)motState.An_BearingWear;
+        s.Mot_AnSensorNoise.Value = (bool)motState.An_SensorNoise;
 
         // Motor IO
-        s.MotIn_DriveFrequencyCmd.Value = motIn.DriveFrequencyCmd;
-        s.MotIn_DriveVoltageCmd.Value = motIn.DriveVoltageCmd;
-        s.MotOut_PhaseCurrent.Value = motOut.PhaseCurrent;
+        s.MotIn_DriveFrequencyCmd.Value = (double)motIn.DriveFrequencyCmd;
+        s.MotIn_DriveVoltageCmd.Value = (double)motIn.DriveVoltageCmd;
+        s.MotOut_PhaseCurrent.Value = (double)motOut.PhaseCurrent;
 
         foreach (var v in new[] {
             s.Vfd_TargetFrequency,s.Vfd_BusVoltage,s.Vfd_HeatsinkTemp,s.Vfd_AnUnderVoltage,s.Vfd_AnOverVoltage,s.Vfd_AnPhaseLoss,s.Vfd_AnGroundFault,

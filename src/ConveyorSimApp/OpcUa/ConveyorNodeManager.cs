@@ -1,6 +1,7 @@
 ﻿using Opc.Ua;
 using Opc.Ua.Server;
 using OpcUaServerLib;
+using Org.BouncyCastle.Asn1.X509;
 using PackageSimLib;
 using ThreePhaseSupplySimLib;
 
@@ -57,13 +58,13 @@ internal sealed class ConveyorNodeManager : MyNodeManager
 
         // Supply
         var supply = AddFolder(conveyor, "Supply");
-        bindings.Supply_LineLineVoltage = supply.AddVar(supplyOutputs, xx => xx.LineLineVoltage, DataTypeIds.Double);
-        bindings.Supply_Frequency = supply.AddVar(supplyOutputs, xx => xx.Frequency, DataTypeIds.Double);
-        bindings.Supply_TargetVoltageLL = supply.AddVar(supplyState, xx => xx.TargetVoltageLL, DataTypeIds.Double);
-        bindings.Supply_TargetFrequency = supply.AddVar(supplyState, xx => xx.TargetFrequency, DataTypeIds.Double);
-        bindings.Supply_AnUnderVoltage = supply.AddVar(supplyState, xx => xx.An_UnderVoltage, DataTypeIds.Boolean);
-        bindings.Supply_AnOverVoltage = supply.AddVar(supplyState, xx => xx.An_OverVoltage, DataTypeIds.Boolean);
-        bindings.Supply_AnFrequencyDrift = supply.AddVar(supplyState, xx => xx.An_FrequencyDrift, DataTypeIds.Boolean);
+        bindings.Supply_LineLineVoltage = supply.AddVar(supplyOutputs, xx => xx.LineLineVoltage);
+        bindings.Supply_Frequency = supply.AddVar(supplyOutputs, xx => xx.Frequency);
+        bindings.Supply_TargetVoltageLL = supply.AddVar(supplyState, xx => xx.TargetVoltageLL);
+        bindings.Supply_TargetFrequency = supply.AddVar(supplyState, xx => xx.TargetFrequency);
+        bindings.Supply_AnUnderVoltage = supply.AddVar(supplyState, xx => xx.An_UnderVoltage);
+        bindings.Supply_AnOverVoltage = supply.AddVar(supplyState, xx => xx.An_OverVoltage);
+        bindings.Supply_AnFrequencyDrift = supply.AddVar(supplyState, xx => xx.An_FrequencyDrift);
 
         // Segments
         var segments = AddFolder(conveyor, "Segments");
@@ -84,34 +85,34 @@ internal sealed class ConveyorNodeManager : MyNodeManager
 
             var sb = new ConveyorNodeBindings.SegmentBinding
             {
-                Vfd_TargetFrequency = vfdState.AddVar(segmentObject, xx => xx.VfdState.TargetFrequency, DataTypeIds.Double),
-                Vfd_BusVoltage = vfdState.AddVar(segmentObject, xx => xx.VfdState.BusVoltage, DataTypeIds.Double),
-                Vfd_HeatsinkTemp = vfdState.AddVar(segmentObject, xx => xx.VfdState.HeatsinkTemp, DataTypeIds.Double),
-                Vfd_AnUnderVoltage = vfdState.AddVar(segmentObject, xx => xx.VfdState.An_UnderVoltage, DataTypeIds.Boolean),
-                Vfd_AnOverVoltage = vfdState.AddVar(segmentObject, xx => xx.VfdState.An_OverVoltage, DataTypeIds.Boolean),
-                Vfd_AnPhaseLoss = vfdState.AddVar(segmentObject, xx => xx.VfdState.An_PhaseLoss, DataTypeIds.Boolean),
-                Vfd_AnGroundFault = vfdState.AddVar(segmentObject, xx => xx.VfdState.An_GroundFault, DataTypeIds.Boolean),
+                Vfd_TargetFrequency = vfdState.AddVar(segmentObject, xx => xx.VfdState.TargetFrequency),
+                Vfd_BusVoltage = vfdState.AddVar(segmentObject, xx => xx.VfdState.BusVoltage),
+                Vfd_HeatsinkTemp = vfdState.AddVar(segmentObject, xx => xx.VfdState.HeatsinkTemp),
+                Vfd_AnUnderVoltage = vfdState.AddVar(segmentObject, xx => xx.VfdState.An_UnderVoltage),
+                Vfd_AnOverVoltage = vfdState.AddVar(segmentObject, xx => xx.VfdState.An_OverVoltage),
+                Vfd_AnPhaseLoss = vfdState.AddVar(segmentObject, xx => xx.VfdState.An_PhaseLoss),
+                Vfd_AnGroundFault = vfdState.AddVar(segmentObject, xx => xx.VfdState.An_GroundFault),
 
-                VfdIn_SupplyVoltageLL = vfdIn.AddVar(segmentObject, xx => xx.VfdInputs.SupplyVoltageLL, DataTypeIds.Double),
-                VfdIn_SupplyFrequency = vfdIn.AddVar(segmentObject, xx => xx.VfdInputs.SupplyFrequency, DataTypeIds.Double),
-                VfdIn_MotorCurrentFeedback = vfdIn.AddVar(segmentObject, xx => xx.VfdInputs.MotorCurrentFeedback, DataTypeIds.Double),
+                VfdIn_SupplyVoltageLL = vfdIn.AddVar(segmentObject, xx => xx.VfdInputs.SupplyVoltageLL),
+                VfdIn_SupplyFrequency = vfdIn.AddVar(segmentObject, xx => xx.VfdInputs.SupplyFrequency),
+                VfdIn_MotorCurrentFeedback = vfdIn.AddVar(segmentObject, xx => xx.VfdInputs.MotorCurrentFeedback),
 
-                VfdOut_OutputFrequency = vfdOut.AddVar(segmentObject, xx => xx.VfdOutputs.OutputFrequency, DataTypeIds.Double),
-                VfdOut_OutputVoltage = vfdOut.AddVar(segmentObject, xx => xx.VfdOutputs.OutputVoltage, DataTypeIds.Double),
+                VfdOut_OutputFrequency = vfdOut.AddVar(segmentObject, xx => xx.VfdOutputs.OutputFrequency),
+                VfdOut_OutputVoltage = vfdOut.AddVar(segmentObject, xx => xx.VfdOutputs.OutputVoltage),
 
-                Mot_SpeedRpm = motState.AddVar(segmentObject, xx => xx.MotorState.SpeedRpm, DataTypeIds.Double),
-                Mot_ElectTorque = motState.AddVar(segmentObject, xx => xx.MotorState.ElectTorque, DataTypeIds.Double),
-                Mot_Trated = motState.AddVar(segmentObject, xx => xx.MotorState.Trated, DataTypeIds.Double),
-                Mot_VratedPhPh = motState.AddVar(segmentObject, xx => xx.MotorState.VratedPhPh, DataTypeIds.Double),
-                Mot_AnPhaseLoss = motState.AddVar(segmentObject, xx => xx.MotorState.An_PhaseLoss, DataTypeIds.Boolean),
-                Mot_AnLoadJam = motState.AddVar(segmentObject, xx => xx.MotorState.An_LoadJam, DataTypeIds.Boolean),
-                Mot_AnBearingWear = motState.AddVar(segmentObject, xx => xx.MotorState.An_BearingWear, DataTypeIds.Boolean),
-                Mot_AnSensorNoise = motState.AddVar(segmentObject, xx => xx.MotorState.An_SensorNoise, DataTypeIds.Boolean),
+                Mot_SpeedRpm = motState.AddVar(segmentObject, xx => xx.MotorState.SpeedRpm),
+                Mot_ElectTorque = motState.AddVar(segmentObject, xx => xx.MotorState.ElectTorque),
+                Mot_Trated = motState.AddVar(segmentObject, xx => xx.MotorState.Trated),
+                Mot_VratedPhPh = motState.AddVar(segmentObject, xx => xx.MotorState.VratedPhPh),
+                Mot_AnPhaseLoss = motState.AddVar(segmentObject, xx => xx.MotorState.An_PhaseLoss),
+                Mot_AnLoadJam = motState.AddVar(segmentObject, xx => xx.MotorState.An_LoadJam),
+                Mot_AnBearingWear = motState.AddVar(segmentObject, xx => xx.MotorState.An_BearingWear),
+                Mot_AnSensorNoise = motState.AddVar(segmentObject, xx => xx.MotorState.An_SensorNoise),
 
-                MotIn_DriveFrequencyCmd = motIn.AddVar(segmentObject, xx => xx.MotorInputs.DriveFrequencyCmd, DataTypeIds.Double),
-                MotIn_DriveVoltageCmd = motIn.AddVar(segmentObject, xx => xx.MotorInputs.DriveVoltageCmd, DataTypeIds.Double),
+                MotIn_DriveFrequencyCmd = motIn.AddVar(segmentObject, xx => xx.MotorInputs.DriveFrequencyCmd),
+                MotIn_DriveVoltageCmd = motIn.AddVar(segmentObject, xx => xx.MotorInputs.DriveVoltageCmd),
 
-                MotOut_PhaseCurrent = motOut.AddVar(segmentObject, xx => xx.MotorOutputs.PhaseCurrent, DataTypeIds.Double),
+                MotOut_PhaseCurrent = motOut.AddVar(segmentObject, xx => xx.MotorOutputs.PhaseCurrent),
             };
 
             bindings.Segments[i] = sb;
@@ -120,10 +121,12 @@ internal sealed class ConveyorNodeManager : MyNodeManager
         // Packages
         var pkgs = AddFolder(conveyor, "Packages");
         bindings.Pkg_Count = pkgs.AddVar<int>("Count", DataTypeIds.Int32);
-        bindings.Pkg_Positions = pkgs.AddArrayVar<double>("Positions", DataTypeIds.Double);
-        bindings.Pkg_Masses = pkgs.AddArrayVar<double>("Masses", DataTypeIds.Double);
+        bindings.Pkg_Positions = pkgs.AddArrayVar<double>("Positions");
+        bindings.Pkg_Masses = pkgs.AddArrayVar<double>("Masses");
 
         var supplyNode = conveyor.FindChildBySymbolicName(SystemContext, "Segments/Segment[1]/Vfd/State/BusVoltage");
+
+        AddPredefinedNode(SystemContext, conveyor);
 
         // Save context for ClearChangeMasks
         bindings.Ctx = SystemContext;
