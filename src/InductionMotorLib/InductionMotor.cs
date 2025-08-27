@@ -35,9 +35,9 @@ public class InductionMotor(InductionMotorSettings settings, InductionMotorState
         double domega = (T_e - T_load) / Math.Max(1e-6, settings.Inertia); // rad/s^2
         double domega_rpm = domega * 60.0 / (2.0 * Math.PI);
 
-        state.SpeedRpm += domega_rpm * dt;
+        state.SpeedRpm.Add(domega_rpm * dt);
         // Prevent running backwards in this simple model
-        if (state.SpeedRpm < 0 && inputs.DriveFrequencyCmd >= 0) state.SpeedRpm = 0;
+        if (state.SpeedRpm < 0 && inputs.DriveFrequencyCmd >= 0) state.SpeedRpm.Reset();
 
         // Current proxy: proportional to torque demand divided by (V/f) margin
         double vf_margin = Math.Max(0.2, vf_pu);
@@ -50,7 +50,7 @@ public class InductionMotor(InductionMotorSettings settings, InductionMotorState
             T_e *= 0.6;       // torque drops
         }
 
-        state.ElectTorque = T_e;
-        outputs.PhaseCurrent = I; // wiring output to VFD
+        state.ElectTorque.Set(T_e);
+        outputs.PhaseCurrent.Set(I); // wiring output to VFD
     }
 }

@@ -21,8 +21,8 @@ public class ThreePhaseSupply(ThreePhaseSupplySettings settings, ThreePhaseSuppl
         if (state.An_FrequencyDrift) fTarget = settings.NominalFrequency + settings.DriftHz;
 
         // Slew toward target
-        outputs.LineLineVoltage = Slew(outputs.LineLineVoltage, vTarget, settings.VoltageSlewRate * dt);
-        outputs.Frequency = Slew(outputs.Frequency, fTarget, settings.FrequencySlewRate * dt);
+        outputs.LineLineVoltage.Set(Slew(outputs.LineLineVoltage, vTarget, settings.VoltageSlewRate * dt));
+        outputs.Frequency.Set(Slew(outputs.Frequency, fTarget, settings.FrequencySlewRate * dt));
     }
 
     private static double Slew(double current, double target, double maxStep)

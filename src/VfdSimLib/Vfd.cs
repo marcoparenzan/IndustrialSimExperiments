@@ -15,7 +15,7 @@ public class Vfd(VfdSettings settings, VfdState state, VfdInputs inputs, VfdOutp
         if (state.An_UnderVoltage) baseLL = settings.RatedVoltageLL * 0.5;
         else if (state.An_OverVoltage) baseLL = settings.RatedVoltageLL * 1.25;
 
-        state.BusVoltage = Math.Sqrt(2.0) * baseLL;
+        state.BusVoltage.Set(Math.Sqrt(2.0) * baseLL);
 
         // Faults that trip instantly
         if (state.An_GroundFault) { simState.Trip(VfdFaultCode.GroundFault); }
@@ -23,23 +23,23 @@ public class Vfd(VfdSettings settings, VfdState state, VfdInputs inputs, VfdOutp
         if (!simState.Running)
         {
             ThermalStep(dt, conductionLossW: 0.0);
-            outputs.OutputFrequency = 0.0;
-            outputs.OutputVoltage = 0.0;
-            inputs.MotorCurrentFeedback = 0.0;
+            outputs.OutputFrequency.Reset();
+            outputs.OutputVoltage.Reset();
+            inputs.MotorCurrentFeedback.Reset();
             return;
         }
 
         // Slew output frequency toward target
         double df = state.TargetFrequency - outputs.OutputFrequency;
         double slew = (df >= 0 ? settings.Accel : settings.Decel) * dt;
-        if (Math.Abs(df) <= Math.Abs(slew)) outputs.OutputFrequency = state.TargetFrequency;
-        else outputs.OutputFrequency += Math.Sign(df) * Math.Abs(slew);
+        if (Math.Abs(df) <= Math.Abs(slew)) outputs.OutputFrequency.Set(state.TargetFrequency);
+        else outputs.OutputFrequency.Add(Math.Sign(df) * Math.Abs(slew));
 
         // V/f + boost, capped at rated voltage
         double vf = Math.Max(0.1, outputs.OutputFrequency);
         double voltCmd = settings.RatedVoltageLL * (vf / Math.Max(1.0, settings.RatedFrequency));
         double boost = settings.VoltBoost * settings.RatedVoltageLL;
-        outputs.OutputVoltage = Math.Min(settings.RatedVoltageLL, voltCmd + boost);
+        outputs.OutputVoltage.Set(Math.Min(settings.RatedVoltageLL, voltCmd + boost));
     }
 
     public void Step2(double dt, ISimState simState)
@@ -56,7 +56,7 @@ public class Vfd(VfdSettings settings, VfdState state, VfdInputs inputs, VfdOutp
         double tamb = settings.AmbientTemp;
         double k = 25.0;
         double dT = (conductionLossW / k - (state.HeatsinkTemp - tamb) / settings.ThermalTimeConstant) * dt;
-        state.HeatsinkTemp += dT;
+        state.HeatsinkTemp.Add(dT);
     }
 
     private void DetectTrips()

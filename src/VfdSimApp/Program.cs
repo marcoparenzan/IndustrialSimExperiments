@@ -1,11 +1,8 @@
 ﻿using InductionMotorSimLib;
 using IndustrialSimLib;
 using IndustrialSimLib.SimEvents;
-using System.Globalization;
 using ThreePhaseSupplySimLib;
 using VfdSimLib;
-
-CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
 // VFD settings/state as before...
 var vfdSettings = new VfdSettings
@@ -24,13 +21,11 @@ var vfdSettings = new VfdSettings
     OverVoltPUNomDC = 1.20
 };
 var vdcNorm = Math.Sqrt(2.0) * vfdSettings.RatedVoltageLL;
-var vfdState = new VfdState
-{
-    VdcNom = vdcNorm,
-    BusVoltage = vdcNorm,
-    HeatsinkTemp = vfdSettings.AmbientTemp,
-    TargetFrequency = 50
-};
+var vfdState = new VfdState();
+vfdState.VdcNom.Set(vdcNorm);
+vfdState.BusVoltage.Set(vdcNorm);
+vfdState.HeatsinkTemp.Set(vfdSettings.AmbientTemp);
+vfdState.TargetFrequency.Set(50);
 
 // Supply settings/state/io
 var supplySettings = new ThreePhaseSupplySettings
@@ -42,13 +37,14 @@ var supplySettings = new ThreePhaseSupplySettings
     UnderVoltPU = 0.50, // match old behavior
     OverVoltPU = 1.25   // match old behavior
 };
-var supplyState = new ThreePhaseSupplyState
-{
-    TargetVoltageLL = supplySettings.NominalVoltageLL,
-    TargetFrequency = supplySettings.NominalFrequency
-};
+var supplyState = new ThreePhaseSupplyState();
+supplyState.TargetVoltageLL.Set(supplySettings.NominalVoltageLL);
+supplyState.TargetFrequency.Set(supplySettings.NominalFrequency);
+
 var supplyInputs = new ThreePhaseSupplyInputs();
-var supplyOutputs = new ThreePhaseSupplyOutputs { LineLineVoltage = supplySettings.NominalVoltageLL, Frequency = supplySettings.NominalFrequency };
+var supplyOutputs = new ThreePhaseSupplyOutputs();
+supplyOutputs.LineLineVoltage.Set(supplySettings.NominalVoltageLL);
+supplyOutputs.Frequency.Set(supplySettings.NominalFrequency);
 
 // Motor settings/state as before...
 var motorSettings = new InductionMotorSettings
@@ -69,12 +65,10 @@ var motorSettings = new InductionMotorSettings
     BearingExtraTorque = 5.0
 };
 var omegaRated = 2.0 * Math.PI * (motorSettings.RatedSpeedRpm / 60.0);
-var motorState = new InductionMotorState
-{
-    SpeedRpm = 0,
-    VratedPhPh = motorSettings.RatedVoltageLL,
-    Trated = motorSettings.RatedPower / omegaRated,
-};
+var motorState = new InductionMotorState();
+motorState.SpeedRpm.Reset();
+motorState.VratedPhPh.Set(motorSettings.RatedVoltageLL);
+motorState.Trated.Set(motorSettings.RatedPower / omegaRated);
 
 // Wiring ports
 var vfdInputs = new VfdInputs();
@@ -107,13 +101,13 @@ var simState = new SimState((string key, bool enable)=>
 {
     switch (key.ToLowerInvariant())
     {
-        case "undervoltage": supplyState.An_UnderVoltage = enable; break;
-        case "overvoltage": supplyState.An_OverVoltage = enable; break;
-        case "phaseloss": vfdState.An_PhaseLoss = enable; motorState.An_PhaseLoss = enable; break;
-        case "groundfault": vfdState.An_GroundFault = enable; break;
-        case "loadjam": motorState.An_LoadJam = enable; break;
-        case "bearingwear": motorState.An_BearingWear = enable; break;
-        case "sensornoise": motorState.An_SensorNoise = enable; break;
+        case "undervoltage": supplyState.An_UnderVoltage.Set(enable); break;
+        case "overvoltage": supplyState.An_OverVoltage.Set(enable); break;
+        case "phaseloss": vfdState.An_PhaseLoss.Set(enable); motorState.An_PhaseLoss.Set(enable); break;
+        case "groundfault": vfdState.An_GroundFault.Set(enable); break;
+        case "loadjam": motorState.An_LoadJam.Set(enable); break;
+        case "bearingwear": motorState.An_BearingWear.Set(enable); break;
+        case "sensornoise": motorState.An_SensorNoise.Set(enable); break;
         default: break;
     }
 });
@@ -138,19 +132,19 @@ while (simState.Time < totalTimeSec)
     supply.Step(dt, simState);
 
     // 1) Update VFD (feed supply into VFD inputs)
-    vfdInputs.SupplyVoltageLL = supplyOutputs.LineLineVoltage;
-    vfdInputs.SupplyFrequency = supplyOutputs.Frequency;
+    vfdInputs.SupplyVoltageLL.Set(supplyOutputs.LineLineVoltage);
+    vfdInputs.SupplyFrequency.Set(supplyOutputs.Frequency);
     vfd.Step(dt, simState);
 
     // 2) Wire VFD outputs to motor inputs
-    motorInputs.DriveFrequencyCmd = vfdOutputs.OutputFrequency;
-    motorInputs.DriveVoltageCmd = vfdOutputs.OutputVoltage;
+    motorInputs.DriveFrequencyCmd.Set(vfdOutputs.OutputFrequency);
+    motorInputs.DriveVoltageCmd.Set(vfdOutputs.OutputVoltage);
 
     // 3) Update motor
     motor.Step(dt, simState);
 
     // 4) Wire motor current back to the VFD inputs
-    vfdInputs.MotorCurrentFeedback = motorOutputs.PhaseCurrent;
+    vfdInputs.MotorCurrentFeedback.Set(motorOutputs.PhaseCurrent);
 
     // 5) Run VFD thermal and trip logic
     vfd.Step2(dt, simState);

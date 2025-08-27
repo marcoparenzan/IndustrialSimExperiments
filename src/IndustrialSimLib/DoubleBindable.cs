@@ -1,28 +1,31 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 
 namespace IndustrialSimLib;
 
-public struct DoubleBindable : IBindable<double>
+[DebuggerDisplay("{Value}")]
+public class DoubleBindable : IBindable<double>
 {
     double value;
+    object bounded;
 
     public static implicit operator double(DoubleBindable b) => b.value;
     public static implicit operator DoubleBindable(double v) => new DoubleBindable { value = v };
 
-    public double Value
+    public double Value => value;
+
+    public void Set(double value)
     {
-        get => value;
-        set
-        {
-            this.value = value;
-        }
+        this.value = value;
     }
 
-    public object Bounded { get; set; }
+    public void Add(double value)
+    {
+        this.value += value;
+    }
+
+    public void Reset() => Set(0.0);
+
+    public object Bounded { get => bounded; set => bounded = value; }
 
     public override string ToString()
     {

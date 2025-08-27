@@ -1,4 +1,5 @@
 ﻿using InductionMotorSimLib;
+using IndustrialSimLib;
 using VfdSimLib;
 
 namespace ConveyorSimApp.Models;
@@ -6,8 +7,8 @@ namespace ConveyorSimApp.Models;
 public class Segment
 {
     public int Index { get; set; }
-    public double StartM { get; set; }
-    public double EndM { get; set; }
+    public DoubleBindable StartM { get; set; }
+    public DoubleBindable EndM { get; set; }
 
     public Vfd Vfd { get; set; }
     public VfdState VfdState { get; set; }
@@ -20,8 +21,8 @@ public class Segment
     public InductionMotorInputs MotorInputs { get; set; }
     public InductionMotorOutputs MotorOutputs { get; set; }
 
-    public double BaseConstTorque { get; set; }
-    public double LastBeltSpeed { get; set; }
+    public DoubleBindable BaseConstTorque { get; set; }
+    public DoubleBindable LastBeltSpeed { get; set; }
 
     public bool Running { get; set; } = true; // In this model, simState.Running is global; segments can still log trips
     public string Trip => FaultToString();

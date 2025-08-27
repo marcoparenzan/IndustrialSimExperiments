@@ -1,26 +1,43 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 
 namespace IndustrialSimLib;
 
-public struct BoolBindable : IBindable<bool>
+[DebuggerDisplay("{Value}")]
+public class BoolBindable : IBindable<bool>
 {
     bool value;
 
     public static implicit operator bool(BoolBindable b) => b.value;
     public static implicit operator BoolBindable(bool v) => new BoolBindable { value = v };
 
-    public bool Value
+    public bool Value => value;
+
+    public void Set(bool value)
     {
-        get => value;
-        set
-        {
-            this.value = value;
-        }
+        this.value = value;
     }
+
+    public void Add(bool value)
+    {
+        this.value |= value;
+    }
+
+    public void True()
+    {
+        this.value = true;
+    }
+
+    public void False()
+    {
+        this.value = false;
+    }
+
+    public void Toggle()
+    {
+        this.value = !this.value;
+    }
+
+    public void Reset() => Set(false);
 
     public object Bounded { get; set; }
 

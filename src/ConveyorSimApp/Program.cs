@@ -11,12 +11,10 @@ using System.Globalization;
 using ThreePhaseSupplySimLib;
 using VfdSimLib;
 
-CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-
 // ----------------------------
 // Conveyor configuration
 // ----------------------------
-const int Segments = 5;
+int Segments = 5;
 double ConveyorLengthM = 50.0;
 double SegmentLengthM = ConveyorLengthM / Segments;
 
@@ -43,17 +41,14 @@ var supplySettings = new ThreePhaseSupplySettings
     UnderVoltPU = 0.50, // match legacy VFD behavior
     OverVoltPU = 1.25
 };
-var supplyState = new ThreePhaseSupplyState
-{
-    TargetVoltageLL = supplySettings.NominalVoltageLL,
-    TargetFrequency = supplySettings.NominalFrequency
-};
+var supplyState = new ThreePhaseSupplyState();
+supplyState.TargetVoltageLL.Set(supplySettings.NominalVoltageLL);
+supplyState.TargetFrequency.Set(supplySettings.NominalFrequency);
 var supplyInputs = new ThreePhaseSupplyInputs();
-var supplyOutputs = new ThreePhaseSupplyOutputs
-{
-    LineLineVoltage = supplySettings.NominalVoltageLL,
-    Frequency = supplySettings.NominalFrequency
-};
+var supplyOutputs = new ThreePhaseSupplyOutputs();
+supplyOutputs.LineLineVoltage.Set(supplySettings.NominalVoltageLL);
+supplyOutputs.Frequency.Set(supplySettings.NominalFrequency);
+
 var supply = new ThreePhaseSupply(supplySettings, supplyState, supplyInputs, supplyOutputs);
 
 // ----------------------------
@@ -79,15 +74,14 @@ var vfdSettings = new VfdSettings
 double vfdTargetFreqHz = 30.0;
 
 var segments = new Segment[Segments];
-for (int i = 0; i < Segments; i++)
+for (int i = 0; i < segments.Length; i++)
 {
-    var vfdState = new VfdState
-    {
-        VdcNom = Math.Sqrt(2.0) * vfdSettings.RatedVoltageLL,
-        BusVoltage = Math.Sqrt(2.0) * vfdSettings.RatedVoltageLL,
-        HeatsinkTemp = vfdSettings.AmbientTemp,
-        TargetFrequency = vfdTargetFreqHz
-    };
+    var vfdState = new VfdState();
+    vfdState.VdcNom.Set(Math.Sqrt(2.0) * vfdSettings.RatedVoltageLL);
+    vfdState.BusVoltage.Set(Math.Sqrt(2.0) * vfdSettings.RatedVoltageLL);
+    vfdState.HeatsinkTemp.Set(vfdSettings.AmbientTemp);
+    vfdState.TargetFrequency.Set(vfdTargetFreqHz);
+
     var vfdInputs = new VfdInputs();
     var vfdOutputs = new VfdOutputs();
     var vfd = new Vfd(vfdSettings, vfdState, vfdInputs, vfdOutputs);
@@ -110,12 +104,10 @@ for (int i = 0; i < Segments; i++)
         BearingExtraTorque = 5.0
     };
     var omegaRated = 2.0 * Math.PI * (motorSettings.RatedSpeedRpm / 60.0);
-    var motorState = new InductionMotorState
-    {
-        SpeedRpm = 0,
-        VratedPhPh = motorSettings.RatedVoltageLL,
-        Trated = motorSettings.RatedPower / omegaRated
-    };
+    var motorState = new InductionMotorState();
+    motorState.SpeedRpm.Reset();
+    motorState.VratedPhPh.Set(motorSettings.RatedVoltageLL);
+    motorState.Trated.Set(motorSettings.RatedPower / omegaRated);
     var motorInputs = new InductionMotorInputs();
     var motorOutputs = new InductionMotorOutputs();
     var motor = new InductionMotor(motorSettings, motorState, motorInputs, motorOutputs);
@@ -141,23 +133,23 @@ var packages = new List<Package>();
 // Scenario (optional anomalies)
 // ----------------------------
 SimEvent[] scenario = [
-    new ToggleAnomalyActionEvent( 5.0, (state) => segments[2].MotorState.An_LoadJam = true ),
-    new ToggleAnomalyActionEvent(10.0, (state) => segments[2].MotorState.An_LoadJam = false ),
-    new ToggleAnomalyActionEvent(15.0, (state) => supplyState.An_UnderVoltage = true ),
-    new ToggleAnomalyActionEvent(16.5, (state) => supplyState.An_UnderVoltage = false ),
+    new ToggleAnomalyActionEvent( 5.0, (state) => segments[2].MotorState.An_LoadJam.True() ),
+    new ToggleAnomalyActionEvent(10.0, (state) => segments[2].MotorState.An_LoadJam.True() ),
+    new ToggleAnomalyActionEvent(15.0, (state) => supplyState.An_UnderVoltage.True() ),
+    new ToggleAnomalyActionEvent(16.5, (state) => supplyState.An_UnderVoltage.False() ),
 ];
 
 // ----------------------------
 // Start OPC UA server (exposes Supply + 5 segments + packages)
 // ----------------------------
-ConveyorNodeManager ns = default;
-var opc = await MyOpcUaServerHost.StartAsync("ConveyorSim", "opc.tcp://localhost:4840/ConveyorSim", createNodeManager: (srv, conf) => {
+ConveyorSimApp.OpcUa.MyNodeManager ns = default;
+var opc = await MyOpcUaServerHost.StartAsync("ConveyorSim", "opc.tcp://localhost:4840/ConveyorSim", createNodeManager: (Func<Opc.Ua.Server.IServerInternal, ApplicationConfiguration, Opc.Ua.Server.CustomNodeManager2>)((srv, conf) => {
 
-    ns = new ConveyorNodeManager(srv, conf, supplyState, supplyOutputs, segments, packages.ToArray());
+    ns = new MyNodeManager(srv, conf, "Conveyor", "urn:ConveyorSim:NodeManager", BuildConveyorNamespace);
     ns.SystemContext.NodeIdFactory = ns;
-    return ns;
+    return (Opc.Ua.Server.CustomNodeManager2)ns;
 
-});
+}));
 
 // ----------------------------
 // Simulation timing controls
@@ -207,11 +199,10 @@ while (simState.Time < totalTimeSec)
     // Spawn packages
     if (simState.Time >= nextSpawn)
     {
-        packages.Add(new Package
-        {
-            PositionM = 0.0,
-            MassKg = 0.5 + Random.Shared.NextDouble() * (20.0 - 0.5)
-        });
+        var package = new Package();
+        package.PositionM.Reset();
+        package.PositionM.Set(0.5 + Random.Shared.NextDouble() * (20.0 - 0.5));
+        packages.Add(package);
         nextSpawn += packageSpawnPeriod;
     }
 
@@ -222,7 +213,7 @@ while (simState.Time < totalTimeSec)
     supply.Step(dt, simState);
 
     // Update OPC UA Supply
-    UpdateSupply(supplyState, supplyOutputs);
+    UpdateBindables(supplyState, supplyOutputs);
 
     // For each segment
     for (int i = 0; i < Segments; i++)
@@ -230,15 +221,15 @@ while (simState.Time < totalTimeSec)
         var seg = segments[i];
 
         // 1) Feed supply to VFD inputs
-        seg.VfdInputs.SupplyVoltageLL = supplyOutputs.LineLineVoltage;
-        seg.VfdInputs.SupplyFrequency = supplyOutputs.Frequency;
+        seg.VfdInputs.SupplyVoltageLL.Set(supplyOutputs.LineLineVoltage);
+        seg.VfdInputs.SupplyFrequency.Set(supplyOutputs.Frequency);
 
         // 2) VFD step
         seg.Vfd.Step(dt, simState);
 
         // 3) Wire VFD outputs -> motor inputs
-        seg.MotorInputs.DriveFrequencyCmd = seg.VfdOutputs.OutputFrequency;
-        seg.MotorInputs.DriveVoltageCmd = seg.VfdOutputs.OutputVoltage;
+        seg.MotorInputs.DriveFrequencyCmd.Set(seg.VfdOutputs.OutputFrequency);
+        seg.MotorInputs.DriveVoltageCmd.Set(seg.VfdOutputs.OutputVoltage);
 
         // 4) Compute belt speed and dynamic load torque from packages on this segment
         double beltSpeed = BeltSpeedFromRpm(seg.MotorState.SpeedRpm);
@@ -264,13 +255,13 @@ while (simState.Time < totalTimeSec)
         seg.Motor.Step(dt, simState);
 
         // 6) Wire motor current back to VFD
-        seg.VfdInputs.MotorCurrentFeedback = seg.MotorOutputs.PhaseCurrent;
+        seg.VfdInputs.MotorCurrentFeedback.Set(seg.MotorOutputs.PhaseCurrent);
 
         // 7) VFD thermal & trips
         seg.Vfd.Step2(dt, simState);
 
         // Update OPC UA Segment
-        UpdateSegment(seg.VfdState, seg.VfdInputs, seg.VfdOutputs, seg.MotorState, seg.MotorInputs, seg.MotorOutputs);
+        UpdateBindables(seg.VfdState, seg.VfdInputs, seg.VfdOutputs, seg.MotorState, seg.MotorInputs, seg.MotorOutputs);
     }
 
     // Move packages along belt
@@ -279,7 +270,7 @@ while (simState.Time < totalTimeSec)
         var pkg = packages[p];
         int segIdx = Math.Clamp((int)Math.Floor(pkg.PositionM / SegmentLengthM), 0, Segments - 1);
         double beltSpeed = BeltSpeedFromRpm(segments[segIdx].MotorState.SpeedRpm);
-        pkg.PositionM += beltSpeed * dt;
+        pkg.PositionM.Add(beltSpeed * dt);
 
         if (pkg.PositionM >= ConveyorLengthM)
             packages.RemoveAt(p);
@@ -345,49 +336,25 @@ void PrintStatus(double t, Segment[] segs, List<Package> pkgs)
     }
 }
 
-void UpdateSupply(ThreePhaseSupplyState st, ThreePhaseSupplyOutputs outs)
+void UpdateBindables(params object[] values)
 {
-    ns.UpdateDoubleBindable(outs.LineLineVoltage);
-    ns.UpdateDoubleBindable(outs.Frequency);
-    ns.UpdateDoubleBindable(st.TargetVoltageLL);
-    ns.UpdateDoubleBindable(st.TargetFrequency);
-    ns.UpdateBoolBindable(st.An_UnderVoltage);
-    ns.UpdateBoolBindable(st.An_OverVoltage);
-    ns.UpdateBoolBindable(st.An_FrequencyDrift);
-}
-
-void UpdateSegment(VfdState vfdState, VfdInputs vfdIn, VfdOutputs vfdOut, InductionMotorState motState, InductionMotorInputs motIn, InductionMotorOutputs motOut)
-{
-    // VFD state
-    ns.UpdateDoubleBindable(vfdState.TargetFrequency);
-    ns.UpdateDoubleBindable(vfdState.BusVoltage);
-    ns.UpdateDoubleBindable(vfdState.HeatsinkTemp);
-    ns.UpdateBoolBindable(vfdState.An_UnderVoltage);
-    ns.UpdateBoolBindable(vfdState.An_OverVoltage);
-    ns.UpdateBoolBindable(vfdState.An_PhaseLoss);
-    ns.UpdateBoolBindable(vfdState.An_GroundFault);
-
-    // VFD IO
-    ns.UpdateDoubleBindable(vfdIn.SupplyVoltageLL);
-    ns.UpdateDoubleBindable(vfdIn.SupplyFrequency);
-    ns.UpdateDoubleBindable(vfdIn.MotorCurrentFeedback);
-    ns.UpdateDoubleBindable(vfdOut.OutputFrequency);
-    ns.UpdateDoubleBindable(vfdOut.OutputVoltage);
-
-    // Motor state
-    ns.UpdateDoubleBindable(motState.SpeedRpm);
-    ns.UpdateDoubleBindable(motState.ElectTorque);
-    ns.UpdateDoubleBindable(motState.Trated);
-    ns.UpdateDoubleBindable(motState.VratedPhPh);
-    ns.UpdateBoolBindable(motState.An_PhaseLoss);
-    ns.UpdateBoolBindable(motState.An_LoadJam);
-    ns.UpdateBoolBindable(motState.An_BearingWear);
-    ns.UpdateBoolBindable(motState.An_SensorNoise);
-
-    // Motor IO
-    ns.UpdateDoubleBindable(motIn.DriveFrequencyCmd);
-    ns.UpdateDoubleBindable(motIn.DriveVoltageCmd);
-    ns.UpdateDoubleBindable(motOut.PhaseCurrent);
+    foreach (var value in values)
+    {
+        var type = value.GetType();
+        foreach (var prop in type.GetProperties())
+        {
+            if (prop.PropertyType == typeof(DoubleBindable))
+            {
+                var db = (DoubleBindable)prop.GetValue(value);
+                ns.UpdateDoubleBindable(db);
+            }
+            else if (prop.PropertyType == typeof(BoolBindable))
+            {
+                var bb = (BoolBindable)prop.GetValue(value);
+                ns.UpdateBoolBindable(bb);
+            }
+        }
+    }
 }
 
 void UpdatePackages(IReadOnlyList<Package> pkgs)
@@ -401,4 +368,70 @@ void UpdatePackages(IReadOnlyList<Package> pkgs)
     //Pkg_Count.ClearChangeMasks(Ctx, false);
     //Pkg_Positions.ClearChangeMasks(Ctx, false);
     //Pkg_Masses.ClearChangeMasks(Ctx, false);
+}
+
+void BuildConveyorNamespace(NodeState rootNode)
+{
+    // Supply
+    var supply = rootNode.AddFolder("Supply");
+    supply.AddVar(supplyOutputs, xx => xx.LineLineVoltage);
+    supply.AddVar(supplyOutputs, xx => xx.Frequency);
+    supply.AddVar(supplyState, xx => xx.TargetVoltageLL);
+    supply.AddVar(supplyState, xx => xx.TargetFrequency);
+    supply.AddVar(supplyState, xx => xx.An_UnderVoltage);
+    supply.AddVar(supplyState, xx => xx.An_OverVoltage);
+    supply.AddVar(supplyState, xx => xx.An_FrequencyDrift);
+
+    // Segments
+    var segmentsFolder = rootNode.AddFolder("Segments");
+    for (int i = 0; i < segments.Length; i++)
+    {
+        var segmentObject = segments[i];
+        var seg = segmentsFolder.AddFolder($"Segment[{i}]");
+        var vfd = seg.AddFolder("Vfd");
+        var vfdState = vfd.AddFolder("State");
+        var vfdIn = vfd.AddFolder("Inputs");
+        var vfdOut = vfd.AddFolder("Outputs");
+
+        var mot = seg.AddFolder("Motor");
+        var motState = mot.AddFolder("State");
+        var motIn = mot.AddFolder("Inputs");
+        var motOut = mot.AddFolder("Outputs");
+
+        vfdState.AddVar(segmentObject.VfdState, xx => xx.TargetFrequency);
+        vfdState.AddVar(segmentObject.VfdState, xx => xx.BusVoltage);
+        vfdState.AddVar(segmentObject.VfdState, xx => xx.HeatsinkTemp);
+        vfdState.AddVar(segmentObject.VfdState, xx => xx.VdcNom);
+        vfdState.AddVar(segmentObject.VfdState, xx => xx.An_UnderVoltage);
+        vfdState.AddVar(segmentObject.VfdState, xx => xx.An_OverVoltage);
+        vfdState.AddVar(segmentObject.VfdState, xx => xx.An_PhaseLoss);
+        vfdState.AddVar(segmentObject.VfdState, xx => xx.An_GroundFault);
+
+        vfdIn.AddVar(segmentObject.VfdInputs, xx => xx.SupplyVoltageLL);
+        vfdIn.AddVar(segmentObject.VfdInputs, xx => xx.SupplyFrequency);
+        vfdIn.AddVar(segmentObject.VfdInputs, xx => xx.MotorCurrentFeedback);
+
+        vfdOut.AddVar(segmentObject.VfdOutputs, xx => xx.OutputFrequency);
+        vfdOut.AddVar(segmentObject.VfdOutputs, xx => xx.OutputVoltage);
+
+        motState.AddVar(segmentObject.MotorState, xx => xx.SpeedRpm);
+        motState.AddVar(segmentObject.MotorState, xx => xx.ElectTorque);
+        motState.AddVar(segmentObject.MotorState, xx => xx.Trated);
+        motState.AddVar(segmentObject.MotorState, xx => xx.VratedPhPh);
+        motState.AddVar(segmentObject.MotorState, xx => xx.An_PhaseLoss);
+        motState.AddVar(segmentObject.MotorState, xx => xx.An_LoadJam);
+        motState.AddVar(segmentObject.MotorState, xx => xx.An_BearingWear);
+        motState.AddVar(segmentObject.MotorState, xx => xx.An_SensorNoise);
+
+        motIn.AddVar(segmentObject.MotorInputs, xx => xx.DriveFrequencyCmd);
+        motIn.AddVar(segmentObject.MotorInputs, xx => xx.DriveVoltageCmd);
+
+        motOut.AddVar(segmentObject.MotorOutputs, xx => xx.PhaseCurrent);
+    }
+
+    // Packages
+    var pkgs = rootNode.AddFolder("Packages");
+    pkgs.AddVar<int>("Count", DataTypeIds.Int32);
+    pkgs.AddArrayVar<double>("Positions");
+    pkgs.AddArrayVar<double>("Masses");
 }

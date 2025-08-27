@@ -9,6 +9,6 @@ public class ThreePhaseSupplyInputs
 
 public class ThreePhaseSupplyOutputs
 {
-    public DoubleBindable LineLineVoltage { get; set; } // V rms
-    public DoubleBindable Frequency { get; set; }       // Hz
+    public DoubleBindable LineLineVoltage { get; } = new();  // V rms
+    public DoubleBindable Frequency { get; } = new();        // Hz
 }

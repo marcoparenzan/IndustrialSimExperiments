@@ -1,9 +1,10 @@
-﻿using System;
+﻿using IndustrialSimLib;
+using System;
 
 namespace PackageSimLib;
 
 public class Package
 {
-    public double PositionM { get; set; }
-    public double MassKg { get; set; }
+    public DoubleBindable PositionM { get; } = new(); 
+    public DoubleBindable MassKg { get; } = new(); 
 }

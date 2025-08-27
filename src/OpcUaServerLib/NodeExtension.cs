@@ -1,6 +1,7 @@
 ﻿using IndustrialSimLib;
 using Opc.Ua;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace OpcUaServerLib;
 
@@ -62,10 +63,40 @@ public static class NodeExtension
         var bindable = selector.Compile()(target);
         bindable.Bounded = state;
 
-        memberExpr.Member
-            .DeclaringType!
-            .GetProperty(name)!
-            .SetValue(target, bindable);
+        //var pi = (PropertyInfo)memberExpr.Member;
+
+        //if (pi.CanWrite)
+        //{
+        //    // Assign concrete bindable instance (works for class or struct when a setter exists)
+        //    pi.SetValue(target, bindable);
+        //}
+        //else if (typeof(IBindable<TProperty>).IsAssignableFrom(pi.PropertyType))
+        //{
+        //    var xx = (IBindable<TProperty>?)pi.GetValue(target);
+        //    xx.Bounded = bindable;
+        //    //if (pi.PropertyType.IsValueType)
+        //    //{
+        //    //    // Value type + no setter: attempt to write the backing field with the boxed struct instance.
+        //    //    // NOTE: This may fail on .NET 5+/.NET 9 for readonly (init-only) backing fields.
+        //    //    var backingField = pi.DeclaringType!.GetField($"<{name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+        //    //    if (backingField is null)
+        //    //        throw new InvalidOperationException($"Backing field for {pi.DeclaringType!.Name}.{name} not found.");
+
+        //    //    if (!pi.PropertyType.IsInstanceOfType(bindable))
+        //    //        throw new InvalidOperationException($"Bindable instance is not assignable to property type {pi.PropertyType}.");
+
+        //    //    // Effectively: Set(target, bindable) — write the struct back so the Bounded assignment is retained.
+        //    //    backingField.SetValue(target, bindable);
+        //    //}
+        //    //else
+        //    //{
+        //    //    throw new InvalidOperationException($"Cannot set bindable for property {name}");
+        //    //}
+        //}
+        //else
+        //{
+        //    throw new InvalidOperationException($"Cannot set bindable for property {name}");
+        //}
 
         return parent;
     }
@@ -107,19 +138,6 @@ public static class NodeExtension
 
         return parent;
     }
-
-    //public static BaseDataVariableState AddArrayVar<TTarget, TProperty>(this NodeState parent, TTarget[] target, Expression<Func<TTarget, IBindable<TProperty>>> selector, NodeId dataType)
-    //{
-    //    var name = NameOf(selector);
-
-    //    var name = memberExpr.Member.Name;
-    //    var state = AddArrayVar<TProperty>(parent, name, dataType);
-
-    //    var bindable = selector.Compile()(target);
-    //    bindable.Bounded = state;
-
-    //    return state;
-    //}
 
     public static NodeState AddFolder(this NodeState parent, string name)
     {
