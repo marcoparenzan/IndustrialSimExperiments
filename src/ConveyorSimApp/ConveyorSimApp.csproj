@@ -16,8 +16,4 @@
 		<ProjectReference Include="..\IndustrialSimLib\IndustrialSimLib.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="OpcUa\" />
-	</ItemGroup>
-
 </Project>
