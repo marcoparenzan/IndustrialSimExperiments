@@ -2,13 +2,14 @@
   <Folder Name="/Libs/">
     <Project Path="InductionMotorLib/InductionMotorSimLib.csproj" />
     <Project Path="IndustrialSimLib/IndustrialSimLib.csproj" />
+    <Project Path="KpiLib/KpiLib.csproj" Id="4325639e-c43d-4850-aa5b-b8dacb8fcbae" />
+    <Project Path="OEEKpiLib/OEEKpiLib.csproj" Id="2ed5ef52-b4a4-4897-9b6a-bb74a0f265e9" />
     <Project Path="OpcUaServerLib/OpcUaServerLib.csproj" Id="c980e162-eba9-4a11-b218-2289c6795d52" />
     <Project Path="PackageSimLib/PackageSimLib.csproj" Id="8bbfa2a8-0efa-475f-9f5a-757671e1a5ca" />
     <Project Path="ThreePhaseSupplySimLib/ThreePhaseSupplySimLib.csproj" Id="dd9a9652-ef8a-46ee-bfcc-0fc29f110cd9" />
-    <Project Path="VFDSimLib/VFDSimLib.csproj" DisplayName="VfdSimLib" />
+    <Project Path="VFDSimLib/VFDSimLib.csproj" />
   </Folder>
   <Folder Name="/Simulations/">
-    <Project Path="ConsoleApp1/ConsoleApp1.csproj" />
     <Project Path="ConveyorSimApp/ConveyorSimApp.csproj" Id="a3a5c584-7360-4ab9-8abb-dc4eb5975b66" />
     <Project Path="VFDSimApp/VFDSimApp.csproj" />
   </Folder>

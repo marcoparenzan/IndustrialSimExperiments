@@ -1,8 +1,10 @@
 ﻿using ConveyorSimApp.Models;   // throttle timing
-using ConveyorSimApp.OpcUa; // + add this using
+using ConveyorSimApp.OpcUa;
 using InductionMotorSimLib;
 using IndustrialSimLib;
 using IndustrialSimLib.SimEvents;
+using KpiApp;
+using KpiLib;
 using Opc.Ua;
 using OpcUaServerLib;
 using PackageSimLib;
@@ -10,6 +12,43 @@ using System.Diagnostics;
 using System.Globalization;
 using ThreePhaseSupplySimLib;
 using VfdSimLib;
+
+var db = new KpiDb();
+OEE.Seed(db);
+
+// ---------- KPI runtime aggregation (replaces static parameter paste) ----------
+var baseNow = DateTime.UtcNow;
+
+// Configurable shift meta (could be args/env in future)
+double shiftLengthMin = 480;     // 8h shift
+double plannedBreakMin = 30;
+double plannedStopMin = 10;
+
+// Runtime accumulators (seconds)
+double setupTimeSec = 0.0;
+double runTimeSec = 0.0;
+double unplannedStopSec = 0.0;
+
+// Piece counters
+long totalPiecesOut = 0;
+long goodPiecesOut = 0;     // all good (no scrap logic yet)
+long reworkPieces = 0;
+long failureCount = 0;
+double lastKpiSimTime = 0.0;
+
+// Thresholds to mark setup completed (avg freq reaches ≥ 90% of target once)
+bool setupCompleted = false;
+double setupFreqThresholdFactor = 0.90;
+
+// Track previous running state to count failures (trip transitions)
+bool prevRunning = true;
+
+// Seed STATIC-like params that won’t change (or rarely)
+db.UpsertIfChangedByCodes("ShiftLength", "LINEA_A", "min", shiftLengthMin, "ok", "config", "init", baseNow);
+db.UpsertIfChangedByCodes("BreakTime", "LINEA_A", "min", plannedBreakMin, "ok", "config", "init", baseNow);
+db.UpsertIfChangedByCodes("PlannedStop", "LINEA_A", "min", plannedStopMin, "ok", "config", "init", baseNow);
+// Ideal cycle time (design)
+db.UpsertIfChangedByCodes("IdealCycleTime", "LINEA_A", "s", 2.40, "ok", "config", "init", baseNow);
 
 // ----------------------------
 // Conveyor configuration
@@ -20,13 +59,13 @@ double SegmentLengthM = ConveyorLengthM / Segments;
 
 // Mechanics per segment (motor -> gearbox -> pulley)
 // motor RPM -> belt speed: v = (2π * rpm / 60) * (PulleyRadius / GearRatio)
-double PulleyRadiusM = 0.15; // 300 mm diameter drum
-double GearRatio = 12.0;     // motor:drum speed ratio
-double MechEfficiency = 0.9; // mechanical efficiency motor→belt
-double MuRoll = 0.03;        // rolling resistance coeff
+double PulleyRadiusM = 0.15;
+double GearRatio = 12.0;
+double MechEfficiency = 0.9;
+double MuRoll = 0.03;
 
 // Package generation
-double packageSpawnPeriod = 1.0; // s
+double packageSpawnPeriod = 1.0;
 double nextSpawn = 0.0;
 
 // ----------------------------
@@ -38,7 +77,7 @@ var supplySettings = new ThreePhaseSupplySettings
     NominalFrequency = 50.0,
     VoltageSlewRate = 1000.0,
     FrequencySlewRate = 10.0,
-    UnderVoltPU = 0.50, // match legacy VFD behavior
+    UnderVoltPU = 0.50,
     OverVoltPU = 1.25
 };
 var supplyState = new ThreePhaseSupplyState();
@@ -48,11 +87,10 @@ var supplyInputs = new ThreePhaseSupplyInputs();
 var supplyOutputs = new ThreePhaseSupplyOutputs();
 supplyOutputs.LineLineVoltage.Set(supplySettings.NominalVoltageLL);
 supplyOutputs.Frequency.Set(supplySettings.NominalFrequency);
-
 var supply = new ThreePhaseSupply(supplySettings, supplyState, supplyInputs, supplyOutputs);
 
 // ----------------------------
-// Segment devices (5x)
+// Segment devices
 // ----------------------------
 var vfdSettings = new VfdSettings
 {
@@ -69,8 +107,6 @@ var vfdSettings = new VfdSettings
     UnderVoltPUNomDC = 0.55,
     OverVoltPUNomDC = 1.20
 };
-
-// Target belt: ~0.8 m/s → motor electrical freq near 30 Hz (depends on slip and mechanics)
 double vfdTargetFreqHz = 30.0;
 
 var segments = new Segment[Segments];
@@ -91,16 +127,16 @@ for (int i = 0; i < segments.Length; i++)
         RatedVoltageLL = 400.0,
         RatedFrequency = 50.0,
         PolePairs = 2,
-        RatedPower = 4000.0,     // ~4 kW per segment
+        RatedPower = 4000.0,
         RatedSpeedRpm = 1440.0,
-        Inertia = 0.15,          // includes belt/drum reflected
+        Inertia = 0.15,
         ViscFriction = 0.002,
         CoulombFriction = 0.8,
         SlipNom = 0.03,
         TorqueMaxPU = 2.0,
         Inom = 12.0,
-        ConstLoadTorque = 3.0,   // base torque without packages
-        JamExtraTorque = 150.0,  // jam torque
+        ConstLoadTorque = 3.0,
+        JamExtraTorque = 150.0,
         BearingExtraTorque = 5.0
     };
     var omegaRated = 2.0 * Math.PI * (motorSettings.RatedSpeedRpm / 60.0);
@@ -118,7 +154,8 @@ for (int i = 0; i < segments.Length; i++)
         StartM = i * SegmentLengthM,
         EndM = (i + 1) * SegmentLengthM,
         Vfd = vfd, VfdState = vfdState, VfdInputs = vfdInputs, VfdOutputs = vfdOutputs,
-        Motor = motor, MotorState = motorState, MotorSettings = motorSettings, MotorInputs = motorInputs, MotorOutputs = motorOutputs,
+        Motor = motor, MotorState = motorState, MotorSettings = motorSettings,
+        MotorInputs = motorInputs, MotorOutputs = motorOutputs,
         BaseConstTorque = motorSettings.ConstLoadTorque,
         LastBeltSpeed = 0.0
     };
@@ -130,108 +167,89 @@ for (int i = 0; i < segments.Length; i++)
 var packages = new List<Package>();
 
 // ----------------------------
-// Scenario (optional anomalies)
+// Scenario
 // ----------------------------
 SimEvent[] scenario = [
     new ToggleAnomalyActionEvent( 5.0, (state) => segments[2].MotorState.An_LoadJam.True() ),
-    new ToggleAnomalyActionEvent(10.0, (state) => segments[2].MotorState.An_LoadJam.True() ),
+    // At 10s REMOVE the jam instead of setting again (previously re-enabled)
+    new ToggleAnomalyActionEvent(10.0, (state) => segments[2].MotorState.An_LoadJam.False() ),
     new ToggleAnomalyActionEvent(15.0, (state) => supplyState.An_UnderVoltage.True() ),
     new ToggleAnomalyActionEvent(16.5, (state) => supplyState.An_UnderVoltage.False() ),
 ];
 
 // ----------------------------
-// Start OPC UA server (exposes Supply + 5 segments + packages)
+// OPC UA server
 // ----------------------------
 ConveyorSimApp.OpcUa.MyNodeManager ns = default;
-var opc = await MyOpcUaServerHost.StartAsync("ConveyorSim", "opc.tcp://localhost:4840/ConveyorSim", createNodeManager: (Func<Opc.Ua.Server.IServerInternal, ApplicationConfiguration, Opc.Ua.Server.CustomNodeManager2>)((srv, conf) => {
-
-    ns = new MyNodeManager(srv, conf, "Conveyor", "urn:ConveyorSim:NodeManager", BuildConveyorNamespace);
-    ns.SystemContext.NodeIdFactory = ns;
-    return (Opc.Ua.Server.CustomNodeManager2)ns;
-
-}));
+var opc = await MyOpcUaServerHost.StartAsync("ConveyorSim", "opc.tcp://localhost:4840/ConveyorSim",
+    createNodeManager: (srv, conf) =>
+    {
+        ns = new MyNodeManager(srv, conf, "Conveyor", "urn:ConveyorSim:NodeManager", BuildConveyorNamespace);
+        ns.SystemContext.NodeIdFactory = ns;
+        return ns;
+    });
 
 // ----------------------------
-// Simulation timing controls
+// Simulation timing
 // ----------------------------
-// Defaults: 10 minutes sim, half-speed (slower), 2s start delay
 double totalTimeSec = 600.0;
 double dt = 0.01;
 double samplePeriod = 0.5;
-double speedFactor = 0.5;     // 1.0 = real-time, 0.5 = half-speed (slower), 2.0 = 2x faster
-double startDelaySec = 2.0;   // time to attach OPC UA client
+double speedFactor = 1; //  0.5;
+double startDelaySec = 2.0;
 
-// Override via args: [0]=duration, [1]=speedFactor, [2]=startDelay
 if (args.Length > 0 && double.TryParse(args[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var argDur)) totalTimeSec = argDur;
 if (args.Length > 1 && double.TryParse(args[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var argSpeed)) speedFactor = Math.Max(1e-3, argSpeed);
 if (args.Length > 2 && double.TryParse(args[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var argDelay)) startDelaySec = Math.Max(0.0, argDelay);
 
-// Or environment
-if (double.TryParse(Environment.GetEnvironmentVariable("SIM_DURATION_SEC"), NumberStyles.Float, CultureInfo.InvariantCulture, out var envDur)) totalTimeSec = envDur;
-if (double.TryParse(Environment.GetEnvironmentVariable("SIM_SPEED_FACTOR"), NumberStyles.Float, CultureInfo.InvariantCulture, out var envSpeed)) speedFactor = Math.Max(1e-3, envSpeed);
-if (double.TryParse(Environment.GetEnvironmentVariable("SIM_START_DELAY_SEC"), NumberStyles.Float, CultureInfo.InvariantCulture, out var envDelay)) startDelaySec = Math.Max(0.0, envDelay);
-
-Console.WriteLine($"Starting simulation for {totalTimeSec:F0}s sim-time at speedFactor={speedFactor:F2} (1.0=real-time). Start delay={startDelaySec:F1}s.");
 if (startDelaySec > 0) await Task.Delay(TimeSpan.FromSeconds(startDelaySec));
 
-// Wall-clock throttle to achieve speedFactor (sim seconds per real second)
 var sw = Stopwatch.StartNew();
 var nextWall = sw.Elapsed;
 
-// ----------------------------
 // Run loop
-// ----------------------------
 double nextSample = 0.0;
 int idx = 0;
-
-var simState = new SimState((string key, bool enable) => { /* not used here */ });
+var simState = new SimState((string key, bool enable) => { });
 
 PrintHeader();
 while (simState.Time < totalTimeSec)
 {
-    // Fire due scenario events
     while (idx < scenario.Length && scenario[idx].Time <= simState.Time + 1e-9)
     {
         scenario[idx].Apply(simState);
         idx++;
     }
 
-    // Spawn packages
+    // ---- Package spawn (replace block inside the run loop) ----
     if (simState.Time >= nextSpawn)
     {
         var package = new Package();
         package.PositionM.Reset();
-        package.PositionM.Set(0.5 + Random.Shared.NextDouble() * (20.0 - 0.5));
+        // Spawn near the beginning so it must traverse all segments
+        package.PositionM.Set(0.5 + Random.Shared.NextDouble() * 1.0); // 0.5 .. 1.5 m
         packages.Add(package);
         nextSpawn += packageSpawnPeriod;
     }
 
-    // Step time
     simState.Step(dt);
 
-    // 0) Update grid
     supply.Step(dt, simState);
-
-    // Update OPC UA Supply
     UpdateBindables(supplyState, supplyOutputs);
 
-    // For each segment
+    // Segments
     for (int i = 0; i < Segments; i++)
     {
         var seg = segments[i];
 
-        // 1) Feed supply to VFD inputs
         seg.VfdInputs.SupplyVoltageLL.Set(supplyOutputs.LineLineVoltage);
         seg.VfdInputs.SupplyFrequency.Set(supplyOutputs.Frequency);
 
-        // 2) VFD step
         seg.Vfd.Step(dt, simState);
 
-        // 3) Wire VFD outputs -> motor inputs
         seg.MotorInputs.DriveFrequencyCmd.Set(seg.VfdOutputs.OutputFrequency);
         seg.MotorInputs.DriveVoltageCmd.Set(seg.VfdOutputs.OutputVoltage);
 
-        // 4) Compute belt speed and dynamic load torque from packages on this segment
         double beltSpeed = BeltSpeedFromRpm(seg.MotorState.SpeedRpm);
         double dv = (beltSpeed - seg.LastBeltSpeed) / dt;
         seg.LastBeltSpeed = beltSpeed;
@@ -244,27 +262,19 @@ while (simState.Time < totalTimeSec)
                 segmentMass += pkg.MassKg;
         }
 
-        // Resistive + inertial torque reflected to motor shaft
-        double F = segmentMass * 9.81 * MuRoll + segmentMass * dv; // N
-        double T_load_pkg = (F * PulleyRadiusM) / (GearRatio * MechEfficiency); // Nm
-
-        // Update motor base load torque dynamically
+        double F = segmentMass * 9.81 * MuRoll + segmentMass * dv;
+        double T_load_pkg = (F * PulleyRadiusM) / (GearRatio * MechEfficiency);
         seg.MotorSettings.ConstLoadTorque = seg.BaseConstTorque + T_load_pkg;
 
-        // 5) Motor step
         seg.Motor.Step(dt, simState);
 
-        // 6) Wire motor current back to VFD
         seg.VfdInputs.MotorCurrentFeedback.Set(seg.MotorOutputs.PhaseCurrent);
-
-        // 7) VFD thermal & trips
         seg.Vfd.Step2(dt, simState);
 
-        // Update OPC UA Segment
         UpdateBindables(seg.VfdState, seg.VfdInputs, seg.VfdOutputs, seg.MotorState, seg.MotorInputs, seg.MotorOutputs);
     }
 
-    // Move packages along belt
+    // Packages movement
     for (int p = packages.Count - 1; p >= 0; p--)
     {
         var pkg = packages[p];
@@ -273,38 +283,43 @@ while (simState.Time < totalTimeSec)
         pkg.PositionM.Add(beltSpeed * dt);
 
         if (pkg.PositionM >= ConveyorLengthM)
+        {
             packages.RemoveAt(p);
+            totalPiecesOut++;
+            goodPiecesOut++; // restore: all pieces considered good for now
+        }
     }
 
-    // Update OPC UA packages
     UpdatePackages(packages);
 
-    // Sampled print
     if (simState.Time >= nextSample)
     {
         PrintStatus(simState.Time, segments, packages);
+
+        // KPI update & compute at sample boundary
+        var simNow = baseNow.AddSeconds(simState.Time);
+        double kpiDt = simState.Time - lastKpiSimTime;            // real elapsed simulated seconds since last KPI update
+        if (kpiDt < 0) kpiDt = 0;                                 // safety
+        UpdateKpiParameters(simNow, kpiDt, segments, simState);   // pass correct elapsed time, NOT fixed integration dt
+        lastKpiSimTime = simState.Time;
+
         nextSample += samplePeriod;
     }
 
-    // Throttle to desired wall-clock speed
     nextWall += TimeSpan.FromSeconds(dt / Math.Max(1e-6, speedFactor));
     var delay = nextWall - sw.Elapsed;
     if (delay > TimeSpan.Zero)
         await Task.Delay(delay);
 }
 
-// Event log
 Console.WriteLine();
 Console.WriteLine("Event log:");
 foreach (var e in simState.EventLog) Console.WriteLine(" - " + e);
 
-// Stop OPC UA server
 await opc.StopAsync();
 
-// ----------------------------
-// Helpers & types
-// ----------------------------
-double BeltSpeedFromRpm(double rpm) => (2.0 * Math.PI * rpm / 60.0) * (PulleyRadiusM / GearRatio); // m/s
+// Helpers & types unchanged below...
+double BeltSpeedFromRpm(double rpm) => (2.0 * Math.PI * rpm / 60.0) * (PulleyRadiusM / GearRatio);
 
 void PrintHeader()
 {
@@ -345,8 +360,8 @@ void UpdateBindables(params object[] values)
         {
             if (prop.PropertyType == typeof(DoubleBindable))
             {
-                var db = (DoubleBindable)prop.GetValue(value);
-                ns.UpdateDoubleBindable(db);
+                var dbv = (DoubleBindable)prop.GetValue(value);
+                ns.UpdateDoubleBindable(dbv);
             }
             else if (prop.PropertyType == typeof(BoolBindable))
             {
@@ -361,28 +376,19 @@ void UpdatePackages(IReadOnlyList<Package> pkgs)
 {
     var positions = pkgs.Select(p => p.PositionM).ToArray();
     var masses = pkgs.Select(p => p.MassKg).ToArray();
-    //Pkg_Count.Value = pkgs.Count;
-    //Pkg_Positions.Value = positions;
-    //Pkg_Masses.Value = masses;
-
-    //Pkg_Count.ClearChangeMasks(Ctx, false);
-    //Pkg_Positions.ClearChangeMasks(Ctx, false);
-    //Pkg_Masses.ClearChangeMasks(Ctx, false);
 }
 
 void BuildConveyorNamespace(NodeState rootNode)
 {
-    // Supply
-    var supply = rootNode.AddFolder("Supply");
-    supply.AddVar(supplyOutputs, xx => xx.LineLineVoltage);
-    supply.AddVar(supplyOutputs, xx => xx.Frequency);
-    supply.AddVar(supplyState, xx => xx.TargetVoltageLL);
-    supply.AddVar(supplyState, xx => xx.TargetFrequency);
-    supply.AddVar(supplyState, xx => xx.An_UnderVoltage);
-    supply.AddVar(supplyState, xx => xx.An_OverVoltage);
-    supply.AddVar(supplyState, xx => xx.An_FrequencyDrift);
+    var supplyFolder = rootNode.AddFolder("Supply");
+    supplyFolder.AddVar(supplyOutputs, xx => xx.LineLineVoltage);
+    supplyFolder.AddVar(supplyOutputs, xx => xx.Frequency);
+    supplyFolder.AddVar(supplyState, xx => xx.TargetVoltageLL);
+    supplyFolder.AddVar(supplyState, xx => xx.TargetFrequency);
+    supplyFolder.AddVar(supplyState, xx => xx.An_UnderVoltage);
+    supplyFolder.AddVar(supplyState, xx => xx.An_OverVoltage);
+    supplyFolder.AddVar(supplyState, xx => xx.An_FrequencyDrift);
 
-    // Segments
     var segmentsFolder = rootNode.AddFolder("Segments");
     for (int i = 0; i < segments.Length; i++)
     {
@@ -429,9 +435,143 @@ void BuildConveyorNamespace(NodeState rootNode)
         motOut.AddVar(segmentObject.MotorOutputs, xx => xx.PhaseCurrent);
     }
 
-    // Packages
-    var pkgs = rootNode.AddFolder("Packages");
-    pkgs.AddVar<int>("Count", DataTypeIds.Int32);
-    pkgs.AddArrayVar<double>("Positions");
-    pkgs.AddArrayVar<double>("Masses");
+    var pkgsFolder = rootNode.AddFolder("Packages");
+    pkgsFolder.AddVar<int>("Count", DataTypeIds.Int32);
+    pkgsFolder.AddArrayVar<double>("Positions");
+    pkgsFolder.AddArrayVar<double>("Masses");
+}
+
+// Dynamic parameter updater
+int PackagesInSegment(int segIndex)
+{
+    double start = segments[segIndex].StartM;
+    double end = segments[segIndex].EndM;
+    int count = 0;
+    for (int i = 0; i < packages.Count; i++)
+    {
+        var pos = packages[i].PositionM.Value;
+        if (pos >= start && pos < end)
+            count++;
+    }
+    return count;
+}
+
+// 2) Add this helper (place it near other helpers, e.g. before UpdateKpiParameters)
+void DumpKpiInputs(DateTime simNow)
+{
+    string[] codes = { "IdealCycleTime", "RunTime", "TotalPieces", "GoodPieces", "UnplannedStop", "SetupTime" };
+    var ctx = db.FindContextAt("LINEA_A", simNow)!;
+    Console.WriteLine("   KPI INPUT SNAPSHOT:");
+    foreach (var code in codes)
+    {
+        var v = db.FindValueAt(code, simNow);
+        if (v == null)
+        {
+            Console.WriteLine($"      {code} = (value_dim missing)");
+            continue;
+        }
+        var fact = db.Facts
+            .Where(f => f.ValueId == v.Id && f.ContextId == ctx.Id &&
+                        f.ValidFrom <= simNow && (f.ValidTo == null || simNow < f.ValidTo))
+            .OrderByDescending(f => f.ValidFrom)
+            .FirstOrDefault();
+        if (fact == null)
+            Console.WriteLine($"      {code} = (no fact)");
+        else
+            Console.WriteLine($"      {code,-15} = {fact.DoubleValue,10:F6} (unitId={fact.UnitId})");
+    }
+}
+
+// 3) REPLACE UpdateKpiParameters with this enhanced version
+void UpdateKpiParameters(DateTime simNow, double dt, Segment[] segs, SimState simState)
+{
+    // 1. Detect setup completion
+    if (!setupCompleted)
+    {
+        double avgFreq = segs.Average(s => (double)s.VfdOutputs.OutputFrequency);
+        double target = segs.Average(s => (double)s.VfdState.TargetFrequency);
+        if (target > 1e-6 && avgFreq >= setupFreqThresholdFactor * target)
+            setupCompleted = true;
+    }
+
+    // 2. Production / blockage state
+    var activeMask = segs.Select(s => (double)s.VfdOutputs.OutputFrequency > 0.5).ToArray();
+    bool blocked = false;
+    for (int i = 0; i < segs.Length; i++)
+    {
+        if (!activeMask[i])
+        {
+            int pkgHere = PackagesInSegment(i);
+            if (pkgHere > 0)
+            {
+                bool upstreamActive = activeMask.Take(i).Any(a => a);
+                if (upstreamActive || i == 0)
+                {
+                    blocked = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    // 3. Time classification
+    if (simState.Running)
+    {
+        if (!setupCompleted)
+            setupTimeSec += dt;
+        else if (blocked)
+            unplannedStopSec += dt;
+        else if (activeMask.Any(a => a))
+            runTimeSec += dt;
+        else
+            unplannedStopSec += dt;
+    }
+    else
+    {
+        if (setupCompleted)
+            unplannedStopSec += dt;
+        else
+            setupTimeSec += dt;
+    }
+
+    // 4. Failure transitions
+    if (prevRunning && !simState.Running)
+        failureCount++;
+    prevRunning = simState.Running;
+
+    // 5. Synchronize GoodPieces with TotalPieces (no scrap yet)
+    if (goodPiecesOut != totalPiecesOut)
+        goodPiecesOut = totalPiecesOut;
+
+    // 6. Upsert evolving PARAMs
+    db.UpsertIfChangedByCodes("SetupTime",     "LINEA_A", "min", setupTimeSec     / 60.0, "ok", "derived", "sim", simNow);
+    db.UpsertIfChangedByCodes("RunTime",       "LINEA_A", "min", runTimeSec       / 60.0, "ok", "derived", "sim", simNow);
+    db.UpsertIfChangedByCodes("UnplannedStop", "LINEA_A", "min", unplannedStopSec / 60.0, "ok", "derived", "sim", simNow);
+    db.UpsertIfChangedByCodes("TotalPieces",   "LINEA_A", "pcs", totalPiecesOut,         "ok", "derived", "sim", simNow);
+    db.UpsertIfChangedByCodes("GoodPieces",    "LINEA_A", "pcs", goodPiecesOut,          "ok", "derived", "sim", simNow);
+    db.UpsertIfChangedByCodes("Rework",        "LINEA_A", "pcs", reworkPieces,           "ok", "derived", "sim", simNow);
+    db.UpsertIfChangedByCodes("FAILURE_COUNT", "LINEA_A", "count", failureCount,         "ok", "derived", "sim", simNow);
+
+    // 7. Debug snapshot of raw inputs
+    DumpKpiInputs(simNow);
+
+    // 8. Warm-up skip (optional)
+    if (totalPiecesOut == 0 && runTimeSec < 30.0)
+    {
+        Console.WriteLine($"[KPI t={simState.Time,6:F1}s] (warming) Pieces=0 Run(min)={runTimeSec/60.0:F3}");
+        return;
+    }
+
+    // 9. Compute KPIs (FORCED recompute each sample to avoid stale zeros)
+    double avail = db.ComputeRecursiveForce("A",    "LINEA_A", simNow, "ratio", "ok", "sim");
+    double perf  = db.ComputeRecursiveForce("P",    "LINEA_A", simNow, "ratio", "ok", "sim");
+    double qual  = db.ComputeRecursiveForce("Q",    "LINEA_A", simNow, "ratio", "ok", "sim");
+    double oee   = db.ComputeRecursiveForce("OEE",  "LINEA_A", simNow, "ratio", "ok", "sim");
+    double teep  = db.ComputeRecursiveForce("TEEP", "LINEA_A", simNow, "ratio", "ok", "sim");
+    double ooeVal= db.ComputeRecursiveForce("OOE",  "LINEA_A", simNow, "ratio", "ok", "sim");
+
+    Console.WriteLine(
+        $"[KPI t={simState.Time,6:F1}s] OEE={oee*100:F2}%  A={avail*100:F2}%  P={perf*100:F2}%  Q={qual*100:F2}%  " +
+        $"TEEP={teep*100:F2}%  OOE={ooeVal*100:F2}%  Run(min)={runTimeSec/60.0:F3}  Unpl(min)={unplannedStopSec/60.0:F3} " +
+        $"TotPieces={totalPiecesOut} GoodPieces={goodPiecesOut} Blocked={(blocked ? "Y" : "N")}");
 }
