@@ -2,7 +2,7 @@
 using Opc.Ua;
 using Opc.Ua.Server;
 
-namespace ConveyorSimApp.OpcUa;
+namespace OpcUaServerLib;
 
 public class MyNodeManager : CustomNodeManager2
 {

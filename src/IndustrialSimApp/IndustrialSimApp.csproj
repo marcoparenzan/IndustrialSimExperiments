@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../IndustrialSimLib/IndustrialSimLib.csproj" />
+    <ProjectReference Include="../ConveyorSimLib/ConveyorSimLib.csproj" />
+    <ProjectReference Include="../OpcUaServerLib/OpcUaServerLib.csproj" />
+    <ProjectReference Include="../MqttServerLib/MqttServerLib.csproj" />
+    <ProjectReference Include="../ConsoleDashboardLib/ConsoleDashboardLib.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
