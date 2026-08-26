@@ -1,0 +1,94 @@
+@page "/sources"
+@inject GatewayService Gateway
+
+<PageTitle>Sources - ForgeDataGateway</PageTitle>
+
+<h1 class="text-2xl font-semibold text-white">Sources</h1>
+<p class="mt-1 text-sm text-slate-400">Protocol endpoints the gateway connects to and polls.</p>
+
+<div class="card mt-6">
+    <table class="table-base">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Protocol</th>
+                <th>Endpoint</th>
+                <th>Default interval (ms)</th>
+                <th>Enabled</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var source in Gateway.Config.Sources)
+            {
+                <tr>
+                    <td class="text-white">@source.Name</td>
+                    <td>@source.Protocol</td>
+                    <td class="font-mono text-xs text-slate-400">@source.Endpoint</td>
+                    <td>@source.DefaultSamplingIntervalMs</td>
+                    <td>
+                        <input type="checkbox" checked="@source.Enabled" @onchange="e => ToggleEnabled(source, e)" />
+                    </td>
+                    <td class="text-right">
+                        <button class="btn-danger" @onclick="() => RemoveAsync(source)">Remove</button>
+                    </td>
+                </tr>
+            }
+            @if (Gateway.Config.Sources.Count == 0)
+            {
+                <tr><td colspan="6" class="py-6 text-center text-slate-500">No sources configured yet.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="card mt-6 max-w-xl">
+    <div class="mb-4 text-sm font-semibold text-white">Add source</div>
+    <EditForm Model="draft" OnValidSubmit="AddAsync" class="space-y-4">
+        <div>
+            <label class="field-label">Name</label>
+            <InputText class="field-input" @bind-Value="draft.Name" placeholder="e.g. ForgeSim" />
+        </div>
+        <div>
+            <label class="field-label">Protocol</label>
+            <select class="field-input" @bind="draft.Protocol">
+                <option value="OpcUa">OPC UA</option>
+                <option value="Modbus" disabled>Modbus (coming soon)</option>
+                <option value="S7" disabled>Siemens S7 (coming soon)</option>
+            </select>
+        </div>
+        <div>
+            <label class="field-label">Endpoint</label>
+            <InputText class="field-input" @bind-Value="draft.Endpoint" placeholder="opc.tcp://localhost:4840/ForgeSim" />
+        </div>
+        <div>
+            <label class="field-label">Default sampling interval (ms)</label>
+            <InputNumber class="field-input" @bind-Value="draft.DefaultSamplingIntervalMs" />
+        </div>
+        <button type="submit" class="btn">Add source</button>
+    </EditForm>
+</div>
+
+@code {
+    private SourceDefinition draft = new();
+
+    private async Task AddAsync()
+    {
+        Gateway.Config.Sources.Add(draft);
+        draft = new SourceDefinition();
+        await Gateway.SaveAndReloadAsync();
+    }
+
+    private async Task RemoveAsync(SourceDefinition source)
+    {
+        Gateway.Config.Sources.Remove(source);
+        Gateway.Config.Tags.RemoveAll(t => t.SourceId == source.Id);
+        await Gateway.SaveAndReloadAsync();
+    }
+
+    private async Task ToggleEnabled(SourceDefinition source, ChangeEventArgs e)
+    {
+        source.Enabled = (bool)(e.Value ?? false);
+        await Gateway.SaveAndReloadAsync();
+    }
+}

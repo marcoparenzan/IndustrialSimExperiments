@@ -1,6 +1,6 @@
-# Extending IndustrialSimApp
+# Extending ForgeSimApp
 
-`IndustrialSimApp` is a thin host: `SimulationCommand` (`src/IndustrialSimApp/Cli/SimulationCommand.cs`, a Spectre.Console.Cli `AsyncCommand`) reads configuration + CLI options, resolves one `IMachineModule` and a set of `IProtocolAdapter`s from DI, and hands off to `SimulationWorker` (`src/IndustrialSimApp/SimulationWorker.cs`), which steps/publishes them in a loop. Neither the host nor the protocol layer knows anything about conveyors specifically — everything machine-specific lives behind `IMachineModule`, and everything protocol-specific lives behind `IProtocolAdapter`. Both contracts live in `src/IndustrialSimLib`.
+`ForgeSimApp` is a thin host: `SimulationCommand` (`src/ForgeSimApp/Cli/SimulationCommand.cs`, a Spectre.Console.Cli `AsyncCommand`) reads configuration + CLI options, resolves one `IMachineModule` and a set of `IProtocolAdapter`s from DI, and hands off to `SimulationWorker` (`src/ForgeSimApp/SimulationWorker.cs`), which steps/publishes them in a loop. Neither the host nor the protocol layer knows anything about conveyors specifically — everything machine-specific lives behind `IMachineModule`, and everything protocol-specific lives behind `IProtocolAdapter`. Both contracts live in `src/IndustrialSimLib`.
 
 There's a third, lower layer below both: **devices** (`ThreePhaseSupplySimLib`, `VfdSimLib`, `InductionMotorLib`, `PackageSimLib`, under `/Devices` in `IndustrialSimLib.slnx`) are the individual pieces of physical equipment a machine module composes and steps — a VFD, a motor, a grid supply. A machine module owns instances of these, wires their inputs/outputs to each other, and derives its `SimulationTag`s from their state. Adding a new kind of physical equipment means adding a device; adding a new arrangement of equipment exposed as a runnable simulation means adding a machine module.
 
@@ -83,8 +83,8 @@ Not every reusable class needs to be a full device: `Package` (`src/PackageSimLi
 
    Build `Tags` once (in the constructor, like `ConveyorMachine.BuildTags`) as a list of `SimulationTag.Create("Path.Segment", () => someBindable.Value)`. Tag paths use `.` as the hierarchy separator — protocol adapters turn that into their own addressing (OPC UA turns it into folders).
 3. Add an `Options` class (e.g. `PalletizerOptions`) if the machine needs configuration, following `ConveyorOptions`.
-4. Add the project to `src/IndustrialSimLib.slnx` under `/Machines`, and add a `ProjectReference` from `IndustrialSimApp.csproj`.
-5. Register it in `src/IndustrialSimApp/Cli/SimulationCommand.cs`:
+4. Add the project to `src/IndustrialSimLib.slnx` under `/Machines`, and add a `ProjectReference` from `ForgeSimApp.csproj`.
+5. Register it in `src/ForgeSimApp/Cli/SimulationCommand.cs`:
 
    ```csharp
    builder.Services.Configure<PalletizerOptions>(builder.Configuration.GetSection("Machines:Palletizer"));
@@ -101,7 +101,7 @@ Not every reusable class needs to be a full device: `Package` (`src/PackageSimLi
    });
    ```
 
-6. Select it by setting `"Simulation:Machine": "Palletizer"` in `appsettings.json` (or `INDUSTRIALSIM_Simulation__Machine=Palletizer`, or `--machine Palletizer`), and add a `Machines:Palletizer` configuration section.
+6. Select it by setting `"Simulation:Machine": "Palletizer"` in `appsettings.json` (or `FORGESIM_Simulation__Machine=Palletizer`, or `--machine Palletizer`), and add a `Machines:Palletizer` configuration section.
 7. Add xUnit tests in `IndustrialSim.Tests` mirroring `Conveyor_AdvancesAndExposesProtocolNeutralTags` — step the machine, assert `SimulationTime` advances and every tag has a non-null value.
 
 ## Adding a new protocol adapter
@@ -130,18 +130,18 @@ Not every reusable class needs to be a full device: `Package` (`src/PackageSimLi
    ```
 
    Three reference implementations exist. `OpcUaProtocolAdapter` (`src/OpcUaServerLib/OpcUaProtocolAdapter.cs`) builds an OPC UA address space from `machine.Tags` once in `StartAsync`, then copies `tag.Value` into the corresponding node on every `PublishAsync`. `MqttProtocolAdapter` (`src/MqttServerLib/MqttProtocolAdapter.cs`) maps each tag path to an MQTT topic string and, on every `PublishAsync`, JSON-serializes `tag.Value` and injects a retained message into its embedded `MQTTnet.Server` broker. `ConsoleDashboardProtocolAdapter` (`src/ConsoleDashboardLib/ConsoleDashboardProtocolAdapter.cs`) instead renders `machine.Tags` as rows of a Spectre.Console live table, refreshing on a throttle rather than every tick — and is a useful example of a "protocol" adapter that isn't a network protocol at all, plus of guarding a presentation-layer adapter against non-interactive environments (it no-ops when `AnsiConsole.Profile.Capabilities.Interactive` is false, since Spectre's live display can hang if driven against a redirected/piped stdout). A register-based protocol (Modbus/S7) would instead assign each tag a fixed offset in `StartAsync` and write raw bytes/words in `PublishAsync`.
-3. Add the project under `/Protocols` in `IndustrialSimLib.slnx`, and reference it from `IndustrialSimApp.csproj`.
-4. Register it as another `IProtocolAdapter` in `src/IndustrialSimApp/Cli/SimulationCommand.cs`:
+3. Add the project under `/Protocols` in `IndustrialSimLib.slnx`, and reference it from `ForgeSimApp.csproj`.
+4. Register it as another `IProtocolAdapter` in `src/ForgeSimApp/Cli/SimulationCommand.cs`:
 
    ```csharp
    builder.Services.AddSingleton<IProtocolAdapter>(_ => new ModbusProtocolAdapter(
        builder.Configuration.GetValue("Protocols:Modbus:Port", 502)));
    ```
 
-5. Add `"Modbus"` to `Simulation:Protocols` in `appsettings.json` to enable it by default (multiple adapters can run at once — `SimulationWorker` starts and publishes to all enabled adapters every tick). Optionally expose it on the CLI too: add a nullable property to `SimulationSettings` (`src/IndustrialSimApp/Cli/SimulationSettings.cs`) with a `[CommandOption]` attribute, then map it to a config key in `SimulationCommand.BuildOverrides`, following `MqttPort`/`--mqtt-port` as a template.
+5. Add `"Modbus"` to `Simulation:Protocols` in `appsettings.json` to enable it by default (multiple adapters can run at once — `SimulationWorker` starts and publishes to all enabled adapters every tick). Optionally expose it on the CLI too: add a nullable property to `SimulationSettings` (`src/ForgeSimApp/Cli/SimulationSettings.cs`) with a `[CommandOption]` attribute, then map it to a config key in `SimulationCommand.BuildOverrides`, following `MqttPort`/`--mqtt-port` as a template.
 
 ## Notes
 
 - Tag paths and types are the only contract between a machine and a protocol adapter — keep machine code free of any protocol-specific concerns (no OPC UA / MQTT / Modbus / S7 / Spectre.Console types in `*SimLib` machine projects).
-- `SimulationWorker`'s tick period is derived from `Simulation:StepSeconds / Simulation:SpeedFactor` and is floored at 1ms by the underlying `PeriodicTimer` (see README's "Running IndustrialSimApp" section) — this floor applies regardless of which machine or protocol is active.
-- Configuration precedence is `appsettings.json` < `INDUSTRIALSIM_`-prefixed environment variables < CLI options. `Simulation:Protocols`/`--protocols` is the one exception: because .NET configuration merges array values by index across providers rather than replacing them outright, a shorter `--protocols` override would otherwise leak trailing entries from `appsettings.json` through. `SimulationCommand` sidesteps this by resolving the effective protocol list directly from `SimulationSettings` and injecting it as `IReadOnlyList<string>`, rather than routing it back through `IConfiguration`'s array binding — keep that pattern for any other list-valued CLI option.
+- `SimulationWorker`'s tick period is derived from `Simulation:StepSeconds / Simulation:SpeedFactor` and is floored at 1ms by the underlying `PeriodicTimer` (see README's "Running ForgeSimApp" section) — this floor applies regardless of which machine or protocol is active.
+- Configuration precedence is `appsettings.json` < `FORGESIM_`-prefixed environment variables < CLI options. `Simulation:Protocols`/`--protocols` is the one exception: because .NET configuration merges array values by index across providers rather than replacing them outright, a shorter `--protocols` override would otherwise leak trailing entries from `appsettings.json` through. `SimulationCommand` sidesteps this by resolving the effective protocol list directly from `SimulationSettings` and injecting it as `IReadOnlyList<string>`, rather than routing it back through `IConfiguration`'s array binding — keep that pattern for any other list-valued CLI option.

@@ -2,7 +2,7 @@ using System.ComponentModel;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace IndustrialSimApp.Cli;
+namespace ForgeSimApp.Cli;
 
 public sealed class SimulationSettings : CommandSettings
 {
