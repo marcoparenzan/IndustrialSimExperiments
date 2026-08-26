@@ -1,0 +1,145 @@
+@page "/browse"
+@inject GatewayService Gateway
+
+<PageTitle>Browse - ForgeDataGateway</PageTitle>
+
+<h1 class="text-2xl font-semibold text-white">Browse</h1>
+<p class="mt-1 text-sm text-slate-400">Walk a connected source's address space and add nodes as tags.</p>
+
+<div class="card mt-6">
+    <label class="field-label">Source</label>
+    <select class="field-input max-w-sm" value="@selectedSourceId" @onchange="OnSourceChanged">
+        <option value="">Select a source...</option>
+        @foreach (var source in Gateway.Config.Sources)
+        {
+            <option value="@source.Id">@source.Name (@source.Protocol)</option>
+        }
+    </select>
+
+    @if (selectedSourceId is not null)
+    {
+        <div class="mt-4 flex flex-wrap items-center gap-1 text-sm text-slate-400">
+            <button class="hover:text-white" @onclick="() => NavigateToAsync(0)">root</button>
+            @for (int i = 0; i < path.Count; i++)
+            {
+                var index = i;
+                <span>/</span>
+                <button class="hover:text-white" @onclick="() => NavigateToAsync(index + 1)">@path[index].DisplayName</button>
+            }
+        </div>
+
+        @if (loading)
+        {
+            <div class="mt-4 text-sm text-slate-500">Browsing...</div>
+        }
+        else if (error is not null)
+        {
+            <div class="mt-4 text-sm text-red-400">@error</div>
+        }
+        else
+        {
+            <div class="mt-4 divide-y divide-slate-800/60">
+                @foreach (var node in nodes)
+                {
+                    <div class="flex items-center justify-between py-2">
+                        <button class="flex items-center gap-2 text-left text-sm @(node.HasChildren ? "text-white hover:text-sky-400" : "text-slate-300")"
+                                @onclick="() => node.HasChildren ? EnterAsync(node) : (Task)Task.CompletedTask">
+                            <span class="text-slate-600">@(node.HasChildren ? "\U0001F4C1" : "\U0001F539")</span>
+                            @node.DisplayName
+                            <span class="font-mono text-xs text-slate-600">@node.NodeId</span>
+                        </button>
+                        @if (!node.HasChildren)
+                        {
+                            @if (addingNodeId == node.NodeId)
+                            {
+                                <div class="flex items-center gap-2">
+                                    <input class="field-input w-40" placeholder="alias" @bind="newAlias" @bind:event="oninput" />
+                                    <button class="btn" @onclick="() => ConfirmAddTagAsync(node)">Save</button>
+                                    <button class="btn-secondary" @onclick="() => addingNodeId = null">Cancel</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="btn-secondary" @onclick="() => BeginAddTag(node)">Add as tag</button>
+                            }
+                        }
+                    </div>
+                }
+                @if (nodes.Count == 0)
+                {
+                    <div class="py-4 text-sm text-slate-500">No child nodes.</div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private Guid? selectedSourceId;
+    private readonly List<(string NodeId, string DisplayName)> path = [];
+    private IReadOnlyList<BrowseNode> nodes = [];
+    private bool loading;
+    private string? error;
+    private string? addingNodeId;
+    private string newAlias = "";
+
+    private async Task OnSourceChanged(ChangeEventArgs e)
+    {
+        selectedSourceId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        path.Clear();
+        if (selectedSourceId is not null) await LoadAsync();
+    }
+
+    private async Task EnterAsync(BrowseNode node)
+    {
+        path.Add((node.NodeId, node.DisplayName));
+        await LoadAsync();
+    }
+
+    private async Task NavigateToAsync(int depth)
+    {
+        path.RemoveRange(depth, path.Count - depth);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (selectedSourceId is null) return;
+        loading = true;
+        error = null;
+        StateHasChanged();
+        try
+        {
+            string? nodeId = path.Count > 0 ? path[^1].NodeId : null;
+            nodes = await Gateway.BrowseAsync(selectedSourceId.Value, nodeId);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            nodes = [];
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void BeginAddTag(BrowseNode node)
+    {
+        addingNodeId = node.NodeId;
+        newAlias = node.DisplayName;
+    }
+
+    private async Task ConfirmAddTagAsync(BrowseNode node)
+    {
+        if (selectedSourceId is null || string.IsNullOrWhiteSpace(newAlias)) return;
+        Gateway.Config.Tags.Add(new TagDefinition
+        {
+            SourceId = selectedSourceId.Value,
+            NodeId = node.NodeId,
+            Alias = newAlias.Trim()
+        });
+        addingNodeId = null;
+        await Gateway.SaveAndReloadAsync();
+    }
+}

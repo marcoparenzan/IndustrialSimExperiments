@@ -1,0 +1,102 @@
+@page "/tags"
+@implements IAsyncDisposable
+@inject GatewayService Gateway
+
+<PageTitle>Tags - ForgeDataGateway</PageTitle>
+
+<h1 class="text-2xl font-semibold text-white">Tags</h1>
+<p class="mt-1 text-sm text-slate-400">Sampled tags across all sources, with live values from the in-memory buffer.</p>
+
+<div class="card mt-6">
+    <table class="table-base">
+        <thead>
+            <tr>
+                <th>Source</th>
+                <th>Alias</th>
+                <th>Node</th>
+                <th>Interval (ms)</th>
+                <th>Value</th>
+                <th>Quality</th>
+                <th>Sampled at</th>
+                <th>Enabled</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var tag in Gateway.Config.Tags)
+            {
+                var source = Gateway.Config.Sources.FirstOrDefault(s => s.Id == tag.SourceId);
+                Gateway.LatestValues.TryGetValue(tag.Id, out var latest);
+                <tr>
+                    <td>@(source?.Name ?? "?")</td>
+                    <td class="text-white">@tag.Alias</td>
+                    <td class="font-mono text-xs text-slate-500">@tag.NodeId</td>
+                    <td>@(tag.SamplingIntervalMs?.ToString() ?? $"{source?.DefaultSamplingIntervalMs} (default)")</td>
+                    <td class="font-mono">@(latest?.Value?.ToString() ?? "-")</td>
+                    <td>
+                        @if (latest is not null)
+                        {
+                            <span class="@QualityBadgeClass(latest.Quality)">@latest.Quality</span>
+                        }
+                    </td>
+                    <td class="text-xs text-slate-500">@(latest is not null ? latest.Timestamp.ToString("HH:mm:ss.fff") : "-")</td>
+                    <td>
+                        <input type="checkbox" checked="@tag.Enabled" @onchange="e => ToggleEnabled(tag, e)" />
+                    </td>
+                    <td class="text-right">
+                        <button class="btn-danger" @onclick="() => RemoveAsync(tag)">Remove</button>
+                    </td>
+                </tr>
+            }
+            @if (Gateway.Config.Tags.Count == 0)
+            {
+                <tr><td colspan="9" class="py-6 text-center text-slate-500">No tags yet - add some from the Browse page.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private CancellationTokenSource cts = new();
+
+    protected override void OnInitialized()
+    {
+        _ = RefreshLoopAsync(cts.Token);
+    }
+
+    private async Task RefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+                await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private static string QualityBadgeClass(ValueQuality quality) => quality switch
+    {
+        ValueQuality.Good => "badge-good",
+        ValueQuality.Uncertain => "badge-uncertain",
+        _ => "badge-bad"
+    };
+
+    private async Task ToggleEnabled(TagDefinition tag, ChangeEventArgs e)
+    {
+        tag.Enabled = (bool)(e.Value ?? false);
+        await Gateway.SaveAndReloadAsync();
+    }
+
+    private async Task RemoveAsync(TagDefinition tag)
+    {
+        Gateway.Config.Tags.Remove(tag);
+        await Gateway.SaveAndReloadAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await cts.CancelAsync();
+        cts.Dispose();
+    }
+}

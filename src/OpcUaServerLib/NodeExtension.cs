@@ -146,7 +146,7 @@ public static class NodeExtension
             SymbolicName = name,
             ReferenceTypeId = ReferenceTypeIds.Organizes,
             TypeDefinitionId = ObjectTypeIds.FolderType,
-            NodeId = new NodeId($"{parent.BrowseName.Name}.{name}", parent.BrowseName.NamespaceIndex),
+            NodeId = new NodeId($"{parent.NodeId.Identifier}.{name}", parent.BrowseName.NamespaceIndex),
             BrowseName = new QualifiedName(name, parent.BrowseName.NamespaceIndex),
             DisplayName = name,
         };

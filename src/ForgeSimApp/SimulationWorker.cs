@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace IndustrialSimApp;
+namespace ForgeSimApp;
 
 internal sealed class SimulationWorker(
     IMachineModule machine,

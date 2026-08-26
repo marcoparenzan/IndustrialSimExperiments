@@ -1,0 +1,80 @@
+@page "/namespace"
+@using ForgeDataGatewayCore.Mqtt
+@inject GatewayService Gateway
+
+<PageTitle>Namespace &amp; MQTT - ForgeDataGateway</PageTitle>
+
+<h1 class="text-2xl font-semibold text-white">Namespace &amp; MQTT</h1>
+<p class="mt-1 text-sm text-slate-400">The Unified Namespace hierarchy and broker every sampled value is published to.</p>
+
+<div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="card space-y-4">
+        <div class="text-sm font-semibold text-white">Namespace hierarchy</div>
+        <div>
+            <label class="field-label">Enterprise</label>
+            <InputText class="field-input" @bind-Value="Gateway.Config.Namespace.Enterprise" />
+        </div>
+        <div>
+            <label class="field-label">Site</label>
+            <InputText class="field-input" @bind-Value="Gateway.Config.Namespace.Site" />
+        </div>
+        <div>
+            <label class="field-label">Area</label>
+            <InputText class="field-input" @bind-Value="Gateway.Config.Namespace.Area" />
+        </div>
+        <div>
+            <label class="field-label">Line</label>
+            <InputText class="field-input" @bind-Value="Gateway.Config.Namespace.Line" />
+        </div>
+        <div>
+            <label class="field-label">Topic template</label>
+            <InputText class="field-input font-mono" @bind-Value="Gateway.Config.Namespace.TopicTemplate" />
+            <p class="mt-1 text-xs text-slate-500">Placeholders: {Enterprise} {Site} {Area} {Line} {Source} {Tag}</p>
+        </div>
+    </div>
+
+    <div class="card space-y-4">
+        <div class="text-sm font-semibold text-white">MQTT broker</div>
+        <div>
+            <label class="field-label">Host</label>
+            <InputText class="field-input" @bind-Value="Gateway.Config.Mqtt.Host" />
+        </div>
+        <div>
+            <label class="field-label">Port</label>
+            <InputNumber class="field-input" @bind-Value="Gateway.Config.Mqtt.Port" />
+        </div>
+        <div>
+            <label class="field-label">Client ID</label>
+            <InputText class="field-input" @bind-Value="Gateway.Config.Mqtt.ClientId" />
+        </div>
+
+        <div class="pt-2">
+            <div class="field-label">Preview</div>
+            <div class="rounded-md bg-slate-950 px-3 py-2 font-mono text-xs text-sky-400">
+                @MqttUnsPublisher.BuildTopic(Gateway.Config.Namespace, "ForgeSim", "Segment0MotorSpeed")
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-6">
+    <button class="btn" @onclick="SaveAsync" disabled="@busy">Save &amp; apply</button>
+    @if (saved)
+    {
+        <span class="ml-3 text-sm text-emerald-400">Saved. Gateway restarted with the new settings.</span>
+    }
+</div>
+
+@code {
+    private bool busy;
+    private bool saved;
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        saved = false;
+        await Gateway.SaveAndReloadAsync();
+        busy = false;
+        saved = true;
+    }
+}

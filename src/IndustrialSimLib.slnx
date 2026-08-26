@@ -17,9 +17,17 @@
     <Project Path="ConsoleDashboardLib/ConsoleDashboardLib.csproj" />
   </Folder>
   <Folder Name="/Applications/">
-    <Project Path="IndustrialSimApp/IndustrialSimApp.csproj" />
+    <Project Path="ForgeSimApp/ForgeSimApp.csproj" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="IndustrialSim.Tests/IndustrialSim.Tests/IndustrialSim.Tests.csproj" />
+    <Project Path="ForgeDataGatewayTests/ForgeDataGatewayTests.csproj" />
+  </Folder>
+  <Folder Name="/ForgeDataGateway/Core/">
+    <Project Path="ForgeDataGatewayCore/ForgeDataGatewayCore.csproj" />
+  </Folder>
+  <Folder Name="/ForgeDataGateway/Applications/">
+    <Project Path="ForgeDataGatewayCli/ForgeDataGatewayCli.csproj" />
+    <Project Path="ForgeDataGatewayApp/ForgeDataGatewayApp.csproj" />
   </Folder>
 </Solution>

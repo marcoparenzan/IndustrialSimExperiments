@@ -9,7 +9,7 @@ using MqttServerLib;
 using OpcUaServerLib;
 using Spectre.Console.Cli;
 
-namespace IndustrialSimApp.Cli;
+namespace ForgeSimApp.Cli;
 
 public sealed class SimulationCommand : AsyncCommand<SimulationSettings>
 {
@@ -20,7 +20,7 @@ public sealed class SimulationCommand : AsyncCommand<SimulationSettings>
             ContentRootPath = AppContext.BaseDirectory
         });
         builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-                             .AddEnvironmentVariables(prefix: "INDUSTRIALSIM_")
+                             .AddEnvironmentVariables(prefix: "FORGESIM_")
                              .AddInMemoryCollection(BuildOverrides(settings));
 
         // Array config values merge by index across providers rather than being replaced outright,
@@ -42,10 +42,10 @@ public sealed class SimulationCommand : AsyncCommand<SimulationSettings>
                 : throw new InvalidOperationException($"Unknown machine module '{machine}'.");
         });
         builder.Services.AddSingleton<IProtocolAdapter>(_ => new OpcUaProtocolAdapter(
-            builder.Configuration["Protocols:OpcUa:Endpoint"] ?? "opc.tcp://localhost:4840/IndustrialSim"));
+            builder.Configuration["Protocols:OpcUa:Endpoint"] ?? "opc.tcp://localhost:4840/ForgeSim"));
         builder.Services.AddSingleton<IProtocolAdapter>(_ => new MqttProtocolAdapter(
             builder.Configuration.GetValue("Protocols:Mqtt:Port", 1883),
-            builder.Configuration["Protocols:Mqtt:TopicRoot"] ?? "IndustrialSim"));
+            builder.Configuration["Protocols:Mqtt:TopicRoot"] ?? "ForgeSim"));
         builder.Services.AddSingleton<IProtocolAdapter>(_ => new ConsoleDashboardProtocolAdapter(
             TimeSpan.FromMilliseconds(builder.Configuration.GetValue("Protocols:Console:RefreshIntervalMs", 200))));
         builder.Services.AddHostedService<SimulationWorker>();
