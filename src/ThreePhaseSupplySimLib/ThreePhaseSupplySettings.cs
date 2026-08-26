@@ -1,3 +1,5 @@
+using IndustrialSimLib;
+
 namespace ThreePhaseSupplySimLib;
 
 public class ThreePhaseSupplySettings

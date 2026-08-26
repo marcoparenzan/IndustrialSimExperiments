@@ -1,16 +1,18 @@
-﻿namespace InductionMotorSimLib;
+﻿using IndustrialSimLib;
+
+namespace InductionMotorSimLib;
 
 public class InductionMotorState
 {
-    public double SpeedRpm { get; set; }    // rpm
-    public double ElectTorque { get; set; } // Nm
+    public DoubleBindable SpeedRpm { get; } = new();     // rpm
+    public DoubleBindable ElectTorque { get; } = new();  // Nm
 
-    public double Trated { get; set; }      // Nm
-    public double VratedPhPh { get; set; }  // V (rated line-line)
+    public DoubleBindable Trated { get; } = new();           // Nm
+    public DoubleBindable VratedPhPh { get; } = new();         // V (rated line-line)
 
     // Anomaly toggles
-    public bool An_PhaseLoss { get; set; }
-    public bool An_LoadJam { get; set; }
-    public bool An_BearingWear { get; set; }
-    public bool An_SensorNoise { get; set; }
+    public BoolBindable An_PhaseLoss { get; } = new(); 
+    public BoolBindable An_LoadJam { get; } = new(); 
+    public BoolBindable An_BearingWear { get; } = new(); 
+    public BoolBindable An_SensorNoise { get; } = new(); 
 }

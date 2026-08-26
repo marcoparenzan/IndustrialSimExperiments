@@ -1,4 +1,6 @@
-﻿namespace InductionMotorSimLib;
+﻿using IndustrialSimLib;
+
+namespace InductionMotorSimLib;
 
 public class InductionMotorSettings
 {

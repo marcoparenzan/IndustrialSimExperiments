@@ -1,4 +1,6 @@
-﻿namespace VFDSimLib;
+﻿using IndustrialSimLib;
+
+namespace VfdSimLib;
 
 public class VfdSettings
 {

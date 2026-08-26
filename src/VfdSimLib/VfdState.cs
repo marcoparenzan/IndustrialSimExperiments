@@ -1,15 +1,17 @@
-﻿namespace VFDSimLib;
+﻿using IndustrialSimLib;
+
+namespace VfdSimLib;
 
 public class VfdState
 {
-    public double TargetFrequency { get; set; }        // Hz
-    public double BusVoltage { get; set; }             // Vdc
-    public double HeatsinkTemp { get; set; }           // °C
-    public double VdcNom { get; set; }
+    public DoubleBindable TargetFrequency { get; } = new();         // Hz
+    public DoubleBindable BusVoltage { get; } = new();              // Vdc
+    public DoubleBindable HeatsinkTemp { get; } = new();            // °C
+    public DoubleBindable  VdcNom { get; } = new();
 
     // Anomaly toggles
-    public bool An_UnderVoltage { get; set; }
-    public bool An_OverVoltage { get; set; }
-    public bool An_PhaseLoss { get; set; }
-    public bool An_GroundFault { get; set; }
+    public BoolBindable An_UnderVoltage { get; } = new(); 
+    public BoolBindable An_OverVoltage { get; } = new(); 
+    public BoolBindable An_PhaseLoss { get; } = new(); 
+    public BoolBindable An_GroundFault { get; } = new(); 
 }

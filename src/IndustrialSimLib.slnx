@@ -1,0 +1,25 @@
+﻿<Solution>
+  <Folder Name="/Core/">
+    <Project Path="IndustrialSimLib/IndustrialSimLib.csproj" />
+  </Folder>
+  <Folder Name="/Devices/">
+    <Project Path="InductionMotorLib/InductionMotorSimLib.csproj" />
+    <Project Path="PackageSimLib/PackageSimLib.csproj" />
+    <Project Path="ThreePhaseSupplySimLib/ThreePhaseSupplySimLib.csproj" />
+    <Project Path="VFDSimLib/VFDSimLib.csproj" />
+  </Folder>
+  <Folder Name="/Machines/">
+    <Project Path="ConveyorSimLib/ConveyorSimLib.csproj" />
+  </Folder>
+  <Folder Name="/Protocols/">
+    <Project Path="OpcUaServerLib/OpcUaServerLib.csproj" />
+    <Project Path="MqttServerLib/MqttServerLib.csproj" />
+    <Project Path="ConsoleDashboardLib/ConsoleDashboardLib.csproj" />
+  </Folder>
+  <Folder Name="/Applications/">
+    <Project Path="IndustrialSimApp/IndustrialSimApp.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="IndustrialSim.Tests/IndustrialSim.Tests/IndustrialSim.Tests.csproj" />
+  </Folder>
+</Solution>
