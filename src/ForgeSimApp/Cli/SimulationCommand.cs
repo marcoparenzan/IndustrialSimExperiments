@@ -1,4 +1,3 @@
-using System.Globalization;
 using ConsoleDashboardLib;
 using ConveyorSimLib;
 using IndustrialSimLib;
@@ -8,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using MqttServerLib;
 using OpcUaServerLib;
 using Spectre.Console.Cli;
+using System.Globalization;
 
 namespace ForgeSimApp.Cli;
 
@@ -34,12 +34,20 @@ public sealed class SimulationCommand : AsyncCommand<SimulationSettings>
         builder.Services.Configure<ConveyorOptions>(builder.Configuration.GetSection("Machines:Conveyor"));
         builder.Services.AddSingleton<ConveyorMachine>(services =>
             new ConveyorMachine(services.GetRequiredService<Microsoft.Extensions.Options.IOptions<ConveyorOptions>>().Value));
+        // Same Machines:Conveyor config section, field-for-field identical options shape — lets
+        // --machine ConveyorPySharp be compared directly against --machine Conveyor. The physics
+        // itself lives in PySharpMachineLib/Scripts/conveyor_machine.py, not in C#.
+        builder.Services.Configure<ConveyorOptions>(builder.Configuration.GetSection("Machines:Conveyor"));
+        builder.Services.AddSingleton<ConveyorPySharpMachine>(services =>
+            new ConveyorPySharpMachine(services.GetRequiredService<Microsoft.Extensions.Options.IOptions<ConveyorOptions>>().Value));
         builder.Services.AddSingleton<IMachineModule>(services =>
         {
             string machine = builder.Configuration["Simulation:Machine"] ?? "Conveyor";
-            return machine.Equals("Conveyor", StringComparison.OrdinalIgnoreCase)
-                ? services.GetRequiredService<ConveyorMachine>()
-                : throw new InvalidOperationException($"Unknown machine module '{machine}'.");
+            if (machine.Equals("Conveyor", StringComparison.OrdinalIgnoreCase))
+                return services.GetRequiredService<ConveyorMachine>();
+            if (machine.Equals("ConveyorPySharp", StringComparison.OrdinalIgnoreCase))
+                return services.GetRequiredService<ConveyorPySharpMachine>();
+            throw new InvalidOperationException($"Unknown machine module '{machine}'.");
         });
         builder.Services.AddSingleton<IProtocolAdapter>(_ => new OpcUaProtocolAdapter(
             builder.Configuration["Protocols:OpcUa:Endpoint"] ?? "opc.tcp://localhost:4840/ForgeSim"));

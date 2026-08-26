@@ -11,4 +11,16 @@
     <ProjectReference Include="../ThreePhaseSupplySimLib/ThreePhaseSupplySimLib.csproj" />
     <ProjectReference Include="../VfdSimLib/VFDSimLib.csproj" />
   </ItemGroup>
+
+	<ItemGroup>
+		<!-- The whole point of this module: no VfdSimLib/InductionMotorSimLib/ThreePhaseSupplySimLib/
+         PackageSimLib reference here — that physics is reimplemented in Scripts/conveyor_machine.py
+         and executed by PySharp instead. -->
+		<PackageReference Include="PySharp.Interpreter" Version="2.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="Scripts\conveyor_machine.py" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
 </Project>
