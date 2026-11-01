@@ -3,7 +3,7 @@ using Opc.Ua.Client;
 
 namespace UaCourse;
 
-// Laboratorio paths: il dispatch e gli helper condivisi sono in Lessons.cs.
+// Paths lab: dispatch and shared helpers live in Lessons.cs.
 public static partial class Lessons
 {
     private static void RunPaths(Session session)
@@ -24,7 +24,7 @@ public static partial class Lessons
         };
         session.TranslateBrowsePathsToNodeIds(null, new BrowsePathCollection { path }, out var targets, out _);
         Console.WriteLine($"Translate: {targets[0].StatusCode}, targets={targets[0].Targets.Count}");
-        Require(StatusCode.IsGood(targets[0].StatusCode) && targets[0].Targets.Count == 1, "Browse path risolto");
+        Require(StatusCode.IsGood(targets[0].StatusCode) && targets[0].Targets.Count == 1, "Browse path resolved");
         Console.WriteLine(targets[0].Targets[0].TargetId);
     }
 }

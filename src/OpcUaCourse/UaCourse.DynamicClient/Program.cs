@@ -11,25 +11,25 @@ try
         new ConfiguredEndpoint(null, description, EndpointConfiguration.Create(app.ApplicationConfiguration)),
         false, "Dynamic recipe client", 60_000, new UserIdentity(new AnonymousIdentityToken()), null);
     var index = session.NamespaceUris.GetIndex("urn:uacourse:plant");
-    if (index < 0) throw new InvalidOperationException("Namespace applicativo assente");
+    if (index < 0) throw new InvalidOperationException("Application namespace not found");
     var types = new ComplexTypeSystem(session);
-    if (!await types.Load()) throw new InvalidOperationException("Caricamento tipi dinamici fallito");
+    if (!await types.Load()) throw new InvalidOperationException("Dynamic type loading failed");
     var value = session.ReadValue(new NodeId("Reactor1.BatchRecipe", (ushort)index));
     var decoded = ExtensionObject.ToEncodeable(value.Value as ExtensionObject)
-        ?? throw new InvalidOperationException("Struttura non decodificata");
+        ?? throw new InvalidOperationException("Structure not decoded");
     var fields = decoded as IComplexTypeProperties
-        ?? throw new InvalidOperationException("Il tipo non proviene dal decoder dinamico");
-    Console.WriteLine($"Tipo CLR generato: {decoded.GetType().FullName}");
+        ?? throw new InvalidOperationException("The type does not come from the dynamic decoder");
+    Console.WriteLine($"Generated CLR type: {decoded.GetType().FullName}");
     foreach (var name in fields.GetPropertyNames())
     {
         var field = fields[name];
         Console.WriteLine($"{name} = {(field is System.Collections.IEnumerable array and not string ? string.Join(", ", array.Cast<object>()) : field)}");
     }
     if (!fields.GetPropertyNames().SequenceEqual(new[] { "Name", "Revision", "Target", "Steps" }))
-        throw new InvalidOperationException("Campi dinamici diversi dal contratto");
+        throw new InvalidOperationException("Dynamic fields differ from the contract");
     if (fields["Name"] is not string { Length: > 0 } || fields["Target"] is not double target || !double.IsFinite(target))
-        throw new InvalidOperationException("Valori dinamici invalidi");
-    Console.WriteLine("OK: ricetta decodificata senza assembly del server e senza RecipeData");
+        throw new InvalidOperationException("Dynamic values are invalid");
+    Console.WriteLine("OK: recipe decoded without the server assembly and without RecipeData");
     session.Close();
 }
 catch (Exception ex) { Console.Error.WriteLine(ex); Environment.ExitCode = 1; }

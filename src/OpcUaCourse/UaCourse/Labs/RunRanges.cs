@@ -5,7 +5,7 @@ namespace UaCourse;
 
 public static partial class Lessons
 {
-    // Soluzione della lezione 08: il range usa indici zero-based, estremi inclusivi.
+    // Lesson 08 solution: the range uses zero-based indices, inclusive bounds.
     private static void RunRanges(Session session)
     {
         var request = new ReadValueId
@@ -16,12 +16,12 @@ public static partial class Lessons
         };
         session.Read(null, 0, TimestampsToReturn.Both,
             new ReadValueIdCollection { request }, out var values, out _);
-        Require(StatusCode.IsGood(values[0].StatusCode), "Read IndexRange valido");
+        Require(StatusCode.IsGood(values[0].StatusCode), "Valid IndexRange read");
         Require(values[0].Value is double[] { Length: 2 } slice && slice.SequenceEqual(new double[] { 40, 60 }),
             "Profile[1:2] = [40, 60]");
         request.IndexRange = "99:100";
         session.Read(null, 0, TimestampsToReturn.Both,
             new ReadValueIdCollection { request }, out values, out _);
-        Require(values[0].StatusCode == StatusCodes.BadIndexRangeNoData, "Range oltre i dati rifiutato");
+        Require(values[0].StatusCode == StatusCodes.BadIndexRangeNoData, "Range beyond the data is rejected");
     }
 }

@@ -6,40 +6,40 @@
 @inject ScreenCatalog Catalog
 @inject UaConnection Connection
 
-<PageTitle>@(selected?.Title ?? "Dashboard non trovata") · UA Lab</PageTitle>
+<PageTitle>@(selected?.Title ?? "Dashboard not found") · UA Lab</PageTitle>
 @if (selected is null)
 {
-    <header class="directory-header"><h1>Dashboard non trovata</h1><p>La schermata richiesta non è presente nel catalogo.</p><a href="/">Torna alla home</a></header>
+    <header class="directory-header"><h1>Dashboard not found</h1><p>The requested screen is not in the catalog.</p><a href="/">Back to home</a></header>
 }
 else
 {
 <header class="course-header">
-    <div><a class="breadcrumb" href="/">Laboratori /</a><h1>@selected.Title</h1><p>@selected.Description</p></div>
+    <div><a class="breadcrumb" href="/">Labs /</a><h1>@selected.Title</h1><p>@selected.Description</p></div>
     <span class="connection @(Connection.Connected ? "online" : "offline")">@Connection.Status</span>
 </header>
 <div class="workspace">
-    <section class="canvas-panel"><h2>@selected.Title</h2><p>@selected.Description</p><p class="canvas-help">Su schermi piccoli scorri lo schema orizzontalmente per mantenere leggibili i valori.</p><Synoptic Screen="selected" Busy="@(busy || !interactive)" CommandRequested="RunScreenCommand" /></section>
+    <section class="canvas-panel"><h2>@selected.Title</h2><p>@selected.Description</p><p class="canvas-help">On small screens scroll the diagram horizontally to keep the values readable.</p><Synoptic Screen="selected" Busy="@(busy || !interactive)" CommandRequested="RunScreenCommand" /></section>
     <aside class="control-panel">
-        <p class="eyebrow">MODELLO / REACTOR1</p><h2>Comandi e ricette</h2>
-        <p>Il reattore controlla la marcia simulata e il totalizzatore dell’impianto idrico.</p>
-        <div class="button-row"><button disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("Start"))'>Avvia</button><button class="secondary" disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("Stop"))'>Arresta</button></div>
-        <label for="target">Target di processo (20–90 °C)</label>
+        <p class="eyebrow">MODEL / REACTOR1</p><h2>Commands and recipes</h2>
+        <p>The reactor controls the simulated run state and the water plant totalizer.</p>
+        <div class="button-row"><button disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("Start"))'>Start</button><button class="secondary" disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("Stop"))'>Stop</button></div>
+        <label for="target">Process target (20–90 °C)</label>
         <input id="target" type="number" min="20" max="90" step="0.5" @bind="target" />
-        <button disabled="@Disabled" @onclick="() => Execute(() => Connection.WriteAsync(target))">Scrivi setpoint · Write</button>
-        <button class="secondary" disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("ApplyRecipe", target))'>Applica ricetta · Call</button>
-        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(Connection.RecipeAsync)">Leggi struttura e array</button>
-        <label for="recipe-name">Nome ricetta strutturata</label>
+        <button disabled="@Disabled" @onclick="() => Execute(() => Connection.WriteAsync(target))">Write setpoint · Write</button>
+        <button class="secondary" disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("ApplyRecipe", target))'>Apply recipe · Call</button>
+        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(Connection.RecipeAsync)">Read structure and array</button>
+        <label for="recipe-name">Structured recipe name</label>
         <input id="recipe-name" maxlength="128" @bind="recipeName" />
-        <label for="recipe-revision">Revisione</label>
+        <label for="recipe-revision">Revision</label>
         <input id="recipe-revision" type="number" min="1" @bind="recipeRevision" />
-        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(() => Connection.LoadBatchRecipeAsync(recipeName, recipeRevision, target))">Carica RecipeDataType · Call</button>
-        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(Connection.BatchRecipeAsync)">Leggi ricetta custom</button>
+        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(() => Connection.LoadBatchRecipeAsync(recipeName, recipeRevision, target))">Load RecipeDataType · Call</button>
+        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(Connection.BatchRecipeAsync)">Read custom recipe</button>
         <output aria-live="polite" class="command-result">@result</output>
-        <p class="fine-print">Le label provengono da MonitoredItem OPC UA. Passa sul valore per vedere NodeId, qualità e timestamp.</p>
+        <p class="fine-print">Labels come from OPC UA MonitoredItems. Hover over a value to see NodeId, quality and timestamp.</p>
     </aside>
 </div>
-<section class="event-panel"><h2>Eventi del processo <span>BaseEventType / Publish</span></h2>
-    @if (Connection.Events.Count == 0) { <p>In attesa di eventi OPC UA…</p> }
+<section class="event-panel"><h2>Process events <span>BaseEventType / Publish</span></h2>
+    @if (Connection.Events.Count == 0) { <p>Waiting for OPC UA events…</p> }
     @foreach (var ev in Connection.Events.Reverse().Take(8)) { <div class="event-row">@ev</div> }
 </section>
 }
@@ -48,9 +48,9 @@ else
     [Parameter] public string ScreenId { get; set; } = "";
     private ScreenDefinition? selected;
     private double target = 65;
-    private string recipeName = "Ricetta Blazor";
+    private string recipeName = "Blazor recipe";
     private uint recipeRevision = 1;
-    private string result = "Seleziona un comando per osservare la risposta UA.";
+    private string result = "Select a command to see the UA response.";
     private bool busy;
     private bool interactive;
     private bool Disabled => !interactive || busy || !Connection.Connected;
@@ -60,7 +60,7 @@ else
     protected override void OnParametersSet()
     {
         selected = Catalog.Screens.FirstOrDefault(screen => screen.Id == ScreenId);
-        result = "Seleziona un comando per osservare la risposta UA.";
+        result = "Select a command to see the UA response.";
     }
     protected override void OnAfterRender(bool firstRender)
     {
@@ -76,7 +76,7 @@ else
     {
         busy = true;
         try { result = await operation(); }
-        catch (Exception ex) { result = $"Comando fallito: {ex.Message}"; }
+        catch (Exception ex) { result = $"Command failed: {ex.Message}"; }
         finally { busy = false; }
     }
     private Task RunScreenCommand(ScreenCommand command) => Execute(() => Connection.CallAsync(command.Method));

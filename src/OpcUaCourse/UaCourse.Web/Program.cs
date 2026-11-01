@@ -5,10 +5,10 @@ using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 Opc.Ua.EncodeableFactory.GlobalFactory.AddEncodeableType(typeof(UaCourse.Models.RecipeData));
-// Anche dotnet run --no-launch-profile (Production) deve risolvere gli asset
-// Blazor e gli script collocati nei componenti dal manifest di build.
+// dotnet run --no-launch-profile (Production) must also resolve the Blazor assets
+// and the scripts placed in the components by the build manifest.
 builder.WebHost.UseStaticWebAssets();
-// Store del laboratorio isolato dal profilo Windows e dagli altri progetti.
+// Lab store isolated from the Windows profile and from other projects.
 builder.Services.AddDataProtection().PersistKeysToFileSystem(
     new DirectoryInfo(Path.Combine(UaCourse.Configuration.ArtifactsRoot, "aspnet-keys")));
 builder.Logging.ClearProviders();

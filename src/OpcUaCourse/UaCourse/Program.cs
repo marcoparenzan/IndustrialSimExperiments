@@ -16,7 +16,7 @@ try
         var app = await Configuration.CreateAsync(true);
         using var server = new PlantServer();
         await app.Start(server);
-        Console.WriteLine($"Server: {Configuration.Endpoint}. Ctrl+C per terminare.");
+        Console.WriteLine($"Server: {Configuration.Endpoint}. Press Ctrl+C to stop.");
         var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; stopped.TrySetResult(); };
         await stopped.Task;
@@ -37,12 +37,12 @@ try
             var configured = new ConfiguredEndpoint(null, endpoint, EndpointConfiguration.Create(app.ApplicationConfiguration));
             using var session = await Session.Create(app.ApplicationConfiguration, configured, false,
                 "UaCourse", 60_000, new UserIdentity(new AnonymousIdentityToken()), null);
-            Console.WriteLine($"Sessione: {session.SessionId}, sicurezza: {endpoint.SecurityPolicyUri}");
+            Console.WriteLine($"Session: {session.SessionId}, security: {endpoint.SecurityPolicyUri}");
             await Lessons.RunAsync(session, command == "verify" ? "all" : args.ElementAtOrDefault(1) ?? "browse");
             session.Close();
         }
         finally { server?.Stop(); server?.Dispose(); }
     }
-    else throw new ArgumentException($"Comando sconosciuto: {command}");
+    else throw new ArgumentException($"Unknown command: {command}");
 }
 catch (Exception ex) { Console.Error.WriteLine(ex); Environment.ExitCode = 1; }

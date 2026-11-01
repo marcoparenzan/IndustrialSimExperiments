@@ -2,7 +2,7 @@ using Opc.Ua;
 
 namespace UaCourse.Models;
 
-/// <summary>Contratto binario UA: l'ordine dei campi coincide con StructureDefinition.</summary>
+/// <summary>UA binary contract: the field order matches the StructureDefinition.</summary>
 public sealed class RecipeData : IEncodeable
 {
     public string Name { get; set; } = "";

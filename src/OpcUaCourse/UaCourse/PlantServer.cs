@@ -90,14 +90,14 @@ internal sealed partial class PlantNodeManager : CustomNodeManager2
                 lock (Lock)
                 {
                     if ((bool)running.Value) return StatusCodes.BadInvalidState;
-                    Set(running, true); output[0] = true; Emit("Reattore avviato", 100);
+                    Set(running, true); output[0] = true; Emit("Reactor started", 100);
                     return ServiceResult.Good;
                 }
             };
             var stop = Method("Stop", [], []);
             stop.OnCallMethod = (ISystemContext ctx, MethodState method, IList<object> input, IList<object> output) =>
             {
-                lock (Lock) { Set(running, false); Emit("Reattore arrestato", 200); return ServiceResult.Good; }
+                lock (Lock) { Set(running, false); Emit("Reactor stopped", 200); return ServiceResult.Good; }
             };
             var apply = Method("ApplyRecipe", [Arg("Target", DataTypeIds.Double)], [Arg("Target", DataTypeIds.Double)]);
             apply.OnCallMethod = (ISystemContext ctx, MethodState method, IList<object> input, IList<object> output) =>
@@ -106,7 +106,7 @@ internal sealed partial class PlantNodeManager : CustomNodeManager2
                 {
                     var target = (double)input[0];
                     if (!double.IsFinite(target) || target < 20 || target > 90) return StatusCodes.BadOutOfRange;
-                    Set(setpoint, target); output[0] = target; Emit($"Ricetta applicata: {target:F1} °C", 300);
+                    Set(setpoint, target); output[0] = target; Emit($"Recipe applied: {target:F1} °C", 300);
                     return ServiceResult.Good;
                 }
             };
@@ -149,7 +149,7 @@ internal sealed partial class PlantNodeManager : CustomNodeManager2
                 else Set(signal, value + Math.Sin(tick * 0.2 + waterSignals.IndexOf(signal)) *
                     (name.StartsWith("Filter") && name != "FilterLevel" ? 0.3 : 0.015));
             }
-            if (++tick % 4 == 0) Emit($"Temperatura: {(double)temperature.Value:F2} °C", 100);
+            if (++tick % 4 == 0) Emit($"Temperature: {(double)temperature.Value:F2} °C", 100);
         }
     }
     private void Emit(string message, ushort severity)

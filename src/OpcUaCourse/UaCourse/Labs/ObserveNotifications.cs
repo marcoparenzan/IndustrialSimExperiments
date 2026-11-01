@@ -28,10 +28,10 @@ public static partial class Lessons
         try
         {
             subscription.AddItem(item); subscription.ApplyChanges();
-            Require(!ServiceResult.IsBad(item.Status.Error), "MonitoredItem creato");
+            Require(!ServiceResult.IsBad(item.Status.Error), "MonitoredItem created");
             if (events) session.Call(Id(session, "Reactor1"), Id(session, "Reactor1.ApplyRecipe"), 68.0);
             await received.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            Console.WriteLine("Notifica ricevuta attraverso Publish.");
+            Console.WriteLine("Notification received through Publish.");
         }
         finally { subscription.Delete(true); session.RemoveSubscription(subscription); }
     }

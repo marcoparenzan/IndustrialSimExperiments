@@ -3,7 +3,7 @@ using Opc.Ua.Client;
 
 namespace UaCourse;
 
-// Laboratorio methods: il dispatch e gli helper condivisi sono in Lessons.cs.
+// Methods lab: dispatch and shared helpers live in Lessons.cs.
 public static partial class Lessons
 {
     private static void RunMethods(Session session)

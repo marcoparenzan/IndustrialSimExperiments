@@ -4,9 +4,9 @@
 @using UaCourse.Web.Services
 @inject UaConnection Connection
 
-<div class="synoptic-viewport" tabindex="0" role="region" aria-label="Sinottico @Screen.Title, scorrimento orizzontale" >
+<div class="synoptic-viewport" tabindex="0" role="region" aria-label="Synoptic @Screen.Title, horizontal scrolling" >
 <div class="synoptic" role="group" aria-label="@Screen.Title">
-    <img src="@Screen.Background" alt="Schema funzionale @Screen.Title" />
+    <img src="@Screen.Background" alt="Functional diagram @Screen.Title" />
     @foreach (var label in Screen.Labels)
     {
         var signal = Connection.Get(label.Node);
@@ -33,5 +33,5 @@
         bool state => state ? "ON" : "OFF", _ => signal.Value?.ToString() ?? "—"
     };
     private static string Detail(SignalLabel label, SignalValue? value)
-        => $"{label.Node} · qualità {value?.Quality.ToString() ?? "assenza dati"} · source {value?.SourceTimestamp.ToString("O")}";
+        => $"{label.Node} · quality {value?.Quality.ToString() ?? "no data"} · source {value?.SourceTimestamp.ToString("O")}";
 }

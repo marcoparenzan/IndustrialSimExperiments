@@ -49,7 +49,7 @@ public static class Configuration
             } : null
         };
         await config.Validate(config.ApplicationType);
-        // Trust locale del laboratorio: confronto DER esatto, mai accettazione globale.
+        // Local lab trust: exact DER comparison, never a global accept.
         config.CertificateValidator.CertificateValidation += (_, e) =>
         {
             if (e.Error.StatusCode != StatusCodes.BadCertificateUntrusted) return;
@@ -60,7 +60,7 @@ public static class Configuration
                     .Any(file => File.ReadAllBytes(file).AsSpan().SequenceEqual(e.Certificate.RawData));
         };
         var app = new ApplicationInstance { ApplicationName = name, ApplicationType = config.ApplicationType, ApplicationConfiguration = config };
-        if (!await app.CheckApplicationInstanceCertificate(false, 2048)) throw new InvalidOperationException("Certificato applicativo non disponibile.");
+        if (!await app.CheckApplicationInstanceCertificate(false, 2048)) throw new InvalidOperationException("Application certificate not available.");
         return app;
     }
 }

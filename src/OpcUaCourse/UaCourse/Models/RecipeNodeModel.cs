@@ -51,11 +51,11 @@ internal sealed partial class PlantNodeManager
                 Set(recipe, new ExtensionObject((RecipeData)decoded.Clone()));
                 Set(setpoint, decoded.Target);
                 output[0] = decoded.Revision;
-                Emit($"Ricetta caricata: {decoded.Name} r{decoded.Revision}", 300);
+                Emit($"Recipe loaded: {decoded.Name} r{decoded.Revision}", 300);
                 return ServiceResult.Good;
             }
         };
-        // Modello esportato dalla stessa definizione usata dal server, per evitare drift.
+        // Model exported from the same definition the server uses, to avoid drift.
         var nodeSet = new Opc.Ua.Export.UANodeSet();
         nodeSet.Export(SystemContext, type, true);
         nodeSet.Export(SystemContext, encoding, true);

@@ -7,7 +7,7 @@ namespace UaCourse.Web.Services;
 
 public record SignalValue(object? Value, StatusCode Quality, DateTime SourceTimestamp);
 
-// Un collegamento condiviso per il laboratorio; i componenti non possiedono sessioni.
+// One shared connection for the lab; components do not own sessions.
 public sealed class UaConnection(ScreenCatalog catalog, ILogger<UaConnection> logger) : BackgroundService
 {
     private readonly SemaphoreSlim gate = new(1, 1);
@@ -15,7 +15,7 @@ public sealed class UaConnection(ScreenCatalog catalog, ILogger<UaConnection> lo
     private readonly ConcurrentQueue<string> events = new();
     private Session? session;
     public bool Connected { get; private set; }
-    public string Status { get; private set; } = "Connessione in corso";
+    public string Status { get; private set; } = "Connecting";
     public IReadOnlyList<string> Events => events.ToArray();
     public SignalValue? Get(string node) => signals.GetValueOrDefault(node);
 
@@ -64,16 +64,16 @@ public sealed class UaConnection(ScreenCatalog catalog, ILogger<UaConnection> lo
                 await lost.Task.WaitAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
-            catch (Exception ex) { logger.LogWarning(ex, "Collegamento OPC UA interrotto"); Status = "Server non disponibile · nuovo tentativo tra 3 s"; }
+            catch (Exception ex) { logger.LogWarning(ex, "OPC UA connection lost"); Status = "Server unavailable · retrying in 3 s"; }
             finally
             {
                 await gate.WaitAsync(CancellationToken.None);
                 try
                 {
                     Connected = false; session = null; signals.Clear();
-                    try { subscription?.Delete(true); } catch (Exception ex) { logger.LogDebug(ex, "Chiusura subscription"); }
+                    try { subscription?.Delete(true); } catch (Exception ex) { logger.LogDebug(ex, "Closing subscription"); }
                     subscription?.Dispose();
-                    try { current?.Close(); } catch (Exception ex) { logger.LogDebug(ex, "Chiusura sessione"); }
+                    try { current?.Close(); } catch (Exception ex) { logger.LogDebug(ex, "Closing session"); }
                     current?.Dispose();
                 }
                 finally { gate.Release(); }
@@ -84,20 +84,20 @@ public sealed class UaConnection(ScreenCatalog catalog, ILogger<UaConnection> lo
     public Task<string> CallAsync(string method, params object[] arguments) => WithSessionAsync(s =>
     {
         var output = s.Call(Lessons.Id(s, "Reactor1"), Lessons.Id(s, $"Reactor1.{method}"), arguments);
-        return output.Count == 0 ? $"{method}: completato" : $"{method}: {string.Join(", ", output)}";
+        return output.Count == 0 ? $"{method}: completed" : $"{method}: {string.Join(", ", output)}";
     });
     public Task<string> WriteAsync(double value) => WithSessionAsync(s =>
     {
         var status = Lessons.Write(s, Lessons.Id(s, "Reactor1.Setpoint"), value);
         if (StatusCode.IsBad(status)) throw new ServiceResultException(status);
-        return $"Setpoint scritto: {value:F1} °C";
+        return $"Setpoint written: {value:F1} °C";
     });
     public Task<string> RecipeAsync() => WithSessionAsync(s =>
     {
         var value = s.ReadValue(Lessons.Id(s, "Reactor1.Recipe"));
         if (StatusCode.IsBad(value.StatusCode)) throw new ServiceResultException(value.StatusCode);
         var range = ExtensionObject.ToEncodeable(value.Value as ExtensionObject) as Opc.Ua.Range
-            ?? throw new InvalidOperationException("Range UA non decodificato");
+            ?? throw new InvalidOperationException("UA Range not decoded");
         var profile = s.ReadValue(Lessons.Id(s, "Reactor1.Profile"));
         if (StatusCode.IsBad(profile.StatusCode)) throw new ServiceResultException(profile.StatusCode);
         return $"Range UA: Low={range.Low}, High={range.High}; Profile: [{string.Join(", ", (double[])profile.Value)}]";
@@ -106,21 +106,21 @@ public sealed class UaConnection(ScreenCatalog catalog, ILogger<UaConnection> lo
     {
         var value = s.ReadValue(Lessons.Id(s, "Reactor1.BatchRecipe"));
         var recipe = ExtensionObject.ToEncodeable(value.Value as ExtensionObject) as UaCourse.Models.RecipeData
-            ?? throw new InvalidOperationException("RecipeData non decodificato");
+            ?? throw new InvalidOperationException("RecipeData not decoded");
         return $"RecipeDataType: {recipe}";
     });
     public Task<string> LoadBatchRecipeAsync(string name, uint revision, double target) => WithSessionAsync(s =>
     {
         var recipe = new UaCourse.Models.RecipeData { Name = name, Revision = revision, Target = target, Steps = [20, 40, target] };
         var output = s.Call(Lessons.Id(s, "Reactor1"), Lessons.Id(s, "Reactor1.LoadRecipe"), new ExtensionObject(recipe));
-        return $"LoadRecipe: revisione accettata {output[0]}";
+        return $"LoadRecipe: revision accepted {output[0]}";
     });
     private async Task<string> WithSessionAsync(Func<Session, string> operation)
     {
         await gate.WaitAsync();
         try
         {
-            var active = session ?? throw new InvalidOperationException("Sessione OPC UA non connessa");
+            var active = session ?? throw new InvalidOperationException("OPC UA session not connected");
             return await Task.Run(() => operation(active));
         }
         finally { gate.Release(); }

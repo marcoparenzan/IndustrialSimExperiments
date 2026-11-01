@@ -5,7 +5,7 @@ namespace UaCourse;
 
 public static partial class Lessons
 {
-    // Soluzione lezione 06: precondizioni e integrità del valore dopo un comando rifiutato.
+    // Lesson 06 solution: preconditions and value integrity after a rejected command.
     private static void RunMethodErrors(Session session)
     {
         var reactor = Id(session, "Reactor1");
@@ -17,9 +17,9 @@ public static partial class Lessons
             session.Call(reactor, Id(session, "Reactor1.ApplyRecipe"), 64.0);
             ExpectStatus(() => session.Call(reactor, Id(session, "Reactor1.ApplyRecipe"), 999.0), StatusCodes.BadOutOfRange);
             Require((double)session.ReadValue(Id(session, "Reactor1.Setpoint")).Value == 64.0,
-                "Call rifiutata non modifica il setpoint");
+                "Rejected Call does not change the setpoint");
             Require((bool)session.ReadValue(Id(session, "Reactor1.Running")).Value,
-                "Secondo Start rifiutato conserva lo stato");
+                "Second Start is rejected and preserves the state");
         }
         finally { session.Call(reactor, Id(session, "Reactor1.Stop")); }
     }
@@ -28,6 +28,6 @@ public static partial class Lessons
         try { operation(); }
         catch (ServiceResultException ex) when (ex.StatusCode == expected)
         { Console.WriteLine($"OK: {new StatusCode(expected)}"); return; }
-        throw new InvalidOperationException($"Atteso {new StatusCode(expected)}");
+        throw new InvalidOperationException($"Expected {new StatusCode(expected)}");
     }
 }

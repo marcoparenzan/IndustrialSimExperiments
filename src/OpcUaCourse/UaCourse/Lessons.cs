@@ -8,7 +8,7 @@ public static partial class Lessons
     public static NodeId Id(Session session, string name)
     {
         var index = session.NamespaceUris.GetIndex(NamespaceUri);
-        if (index < 0) throw new InvalidOperationException($"Namespace {NamespaceUri} assente.");
+        if (index < 0) throw new InvalidOperationException($"Namespace {NamespaceUri} not found.");
         return new NodeId(name, (ushort)index);
     }
     public static async Task RunAsync(Session session, string lesson)
@@ -31,7 +31,7 @@ public static partial class Lessons
             case "method-errors": RunMethodErrors(session); break;
             case "subscribe": await ObserveAsync(session, false); break;
             case "events": await ObserveAsync(session, true); break;
-            default: throw new ArgumentException($"Lezione sconosciuta: {lesson}");
+            default: throw new ArgumentException($"Unknown lesson: {lesson}");
         }
     }
     public static StatusCode Write(Session session, NodeId node, object value)
