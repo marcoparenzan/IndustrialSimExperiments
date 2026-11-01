@@ -1,0 +1,84 @@
+@page "/dashboards/{ScreenId}"
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+@using UaCourse.Web.Modules
+@using UaCourse.Web.Services
+@inject ScreenCatalog Catalog
+@inject UaConnection Connection
+
+<PageTitle>@(selected?.Title ?? "Dashboard non trovata") · UA Lab</PageTitle>
+@if (selected is null)
+{
+    <header class="directory-header"><h1>Dashboard non trovata</h1><p>La schermata richiesta non è presente nel catalogo.</p><a href="/">Torna alla home</a></header>
+}
+else
+{
+<header class="course-header">
+    <div><a class="breadcrumb" href="/">Laboratori /</a><h1>@selected.Title</h1><p>@selected.Description</p></div>
+    <span class="connection @(Connection.Connected ? "online" : "offline")">@Connection.Status</span>
+</header>
+<div class="workspace">
+    <section class="canvas-panel"><h2>@selected.Title</h2><p>@selected.Description</p><p class="canvas-help">Su schermi piccoli scorri lo schema orizzontalmente per mantenere leggibili i valori.</p><Synoptic Screen="selected" Busy="@(busy || !interactive)" CommandRequested="RunScreenCommand" /></section>
+    <aside class="control-panel">
+        <p class="eyebrow">MODELLO / REACTOR1</p><h2>Comandi e ricette</h2>
+        <p>Il reattore controlla la marcia simulata e il totalizzatore dell’impianto idrico.</p>
+        <div class="button-row"><button disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("Start"))'>Avvia</button><button class="secondary" disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("Stop"))'>Arresta</button></div>
+        <label for="target">Target di processo (20–90 °C)</label>
+        <input id="target" type="number" min="20" max="90" step="0.5" @bind="target" />
+        <button disabled="@Disabled" @onclick="() => Execute(() => Connection.WriteAsync(target))">Scrivi setpoint · Write</button>
+        <button class="secondary" disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("ApplyRecipe", target))'>Applica ricetta · Call</button>
+        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(Connection.RecipeAsync)">Leggi struttura e array</button>
+        <label for="recipe-name">Nome ricetta strutturata</label>
+        <input id="recipe-name" maxlength="128" @bind="recipeName" />
+        <label for="recipe-revision">Revisione</label>
+        <input id="recipe-revision" type="number" min="1" @bind="recipeRevision" />
+        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(() => Connection.LoadBatchRecipeAsync(recipeName, recipeRevision, target))">Carica RecipeDataType · Call</button>
+        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(Connection.BatchRecipeAsync)">Leggi ricetta custom</button>
+        <output aria-live="polite" class="command-result">@result</output>
+        <p class="fine-print">Le label provengono da MonitoredItem OPC UA. Passa sul valore per vedere NodeId, qualità e timestamp.</p>
+    </aside>
+</div>
+<section class="event-panel"><h2>Eventi del processo <span>BaseEventType / Publish</span></h2>
+    @if (Connection.Events.Count == 0) { <p>In attesa di eventi OPC UA…</p> }
+    @foreach (var ev in Connection.Events.Reverse().Take(8)) { <div class="event-row">@ev</div> }
+</section>
+}
+
+@code {
+    [Parameter] public string ScreenId { get; set; } = "";
+    private ScreenDefinition? selected;
+    private double target = 65;
+    private string recipeName = "Ricetta Blazor";
+    private uint recipeRevision = 1;
+    private string result = "Seleziona un comando per osservare la risposta UA.";
+    private bool busy;
+    private bool interactive;
+    private bool Disabled => !interactive || busy || !Connection.Connected;
+    private readonly CancellationTokenSource stop = new();
+    private Task? refresh;
+    protected override void OnInitialized() { refresh = RefreshAsync(); }
+    protected override void OnParametersSet()
+    {
+        selected = Catalog.Screens.FirstOrDefault(screen => screen.Id == ScreenId);
+        result = "Seleziona un comando per osservare la risposta UA.";
+    }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender) { interactive = true; StateHasChanged(); }
+    }
+    private async Task RefreshAsync()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+        try { while (await timer.WaitForNextTickAsync(stop.Token)) await InvokeAsync(StateHasChanged); }
+        catch (OperationCanceledException) { }
+    }
+    private async Task Execute(Func<Task<string>> operation)
+    {
+        busy = true;
+        try { result = await operation(); }
+        catch (Exception ex) { result = $"Comando fallito: {ex.Message}"; }
+        finally { busy = false; }
+    }
+    private Task RunScreenCommand(ScreenCommand command) => Execute(() => Connection.CallAsync(command.Method));
+    public async ValueTask DisposeAsync() { stop.Cancel(); if (refresh is not null) await refresh; stop.Dispose(); }
+}

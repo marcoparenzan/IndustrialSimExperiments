@@ -1,0 +1,35 @@
+using Opc.Ua;
+using Opc.Ua.Client;
+using Opc.Ua.Client.ComplexTypes;
+using UaCourse;
+
+try
+{
+    var app = await Configuration.CreateAsync(false);
+    var description = CoreClientUtils.SelectEndpoint(app.ApplicationConfiguration, Configuration.Endpoint, true);
+    using var session = await Session.Create(app.ApplicationConfiguration,
+        new ConfiguredEndpoint(null, description, EndpointConfiguration.Create(app.ApplicationConfiguration)),
+        false, "Dynamic recipe client", 60_000, new UserIdentity(new AnonymousIdentityToken()), null);
+    var index = session.NamespaceUris.GetIndex("urn:uacourse:plant");
+    if (index < 0) throw new InvalidOperationException("Namespace applicativo assente");
+    var types = new ComplexTypeSystem(session);
+    if (!await types.Load()) throw new InvalidOperationException("Caricamento tipi dinamici fallito");
+    var value = session.ReadValue(new NodeId("Reactor1.BatchRecipe", (ushort)index));
+    var decoded = ExtensionObject.ToEncodeable(value.Value as ExtensionObject)
+        ?? throw new InvalidOperationException("Struttura non decodificata");
+    var fields = decoded as IComplexTypeProperties
+        ?? throw new InvalidOperationException("Il tipo non proviene dal decoder dinamico");
+    Console.WriteLine($"Tipo CLR generato: {decoded.GetType().FullName}");
+    foreach (var name in fields.GetPropertyNames())
+    {
+        var field = fields[name];
+        Console.WriteLine($"{name} = {(field is System.Collections.IEnumerable array and not string ? string.Join(", ", array.Cast<object>()) : field)}");
+    }
+    if (!fields.GetPropertyNames().SequenceEqual(new[] { "Name", "Revision", "Target", "Steps" }))
+        throw new InvalidOperationException("Campi dinamici diversi dal contratto");
+    if (fields["Name"] is not string { Length: > 0 } || fields["Target"] is not double target || !double.IsFinite(target))
+        throw new InvalidOperationException("Valori dinamici invalidi");
+    Console.WriteLine("OK: ricetta decodificata senza assembly del server e senza RecipeData");
+    session.Close();
+}
+catch (Exception ex) { Console.Error.WriteLine(ex); Environment.ExitCode = 1; }
