@@ -98,8 +98,8 @@ Source: `src/VfdSimLib` (C#) and the matching section of `src/ConveyorSimLib/Scr
 | Frequency ramp (accel / decel, Hz/s) | Modelled | `Vfd.Step`, `VfdSettings.Accel/Decel` | |
 | V/f law with voltage boost | Modelled | `Vfd.Step` (`VoltBoost`, `RatedFrequency`) | |
 | Operation above base frequency (field weakening) | Simplified: voltage is clamped at the rated value | `Vfd.Step` | |
-| DC bus voltage | Simplified: `√2 × V_LL`, independent of load | `VfdState.BusVoltage`; `VdcNom` declared but unused | Plan step S3a |
-| DC link capacitance and ripple | Not modelled | | S3a (ripple, optional) |
+| DC bus voltage | Modelled (static): `V_LL · (√2 − (√2 − 1.35) · I/I_max)`, i.e. 566 V at no load and 540 V at full current for 400 V; trip thresholds are relative to `VdcNom` | `Vfd.Step`, `VfdSettings.BusFullLoadFactor`, `VfdState.VdcNom`; tag `Vfd.BusVoltageNominal` | |
+| DC link capacitance, ripple, dynamics of the bus | Not modelled (the bus follows the load instantly) | | S3b (capacitance, needed for regeneration) |
 | Heatsink temperature (first-order RC) | Modelled | `Vfd.ThermalStep` | |
 | Cooling fan and its failure | Not modelled | | S3d (optional) |
 | Under/over-voltage trips | Modelled | `Vfd.DetectTrips`, `VfdFaultCode` | |

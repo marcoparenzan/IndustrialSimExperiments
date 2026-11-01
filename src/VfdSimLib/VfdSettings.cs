@@ -15,5 +15,6 @@ public class VfdSettings
     public double AmbientTemp { get; set; } = 25.0;     // °C
     public double OverCurrentMultiple { get; set; } = 1.6; // I_trip = multiple * MaxCurrent
     public double UnderVoltPUNomDC { get; set; } = 0.55;   // trip if Vdc < 0.55 * Vdc_nom
+    public double BusFullLoadFactor { get; set; } = 1.35; // Vdc / V_LL at full load (six-pulse diode bridge average); at no load Vdc = sqrt(2) * V_LL
     public double OverVoltPUNomDC { get; set; } = 1.20;   // trip if Vdc > 1.20 * Vdc_nom
 }

@@ -10,7 +10,9 @@ public class Vfd(VfdSettings settings, VfdState state, VfdInputs inputs, VfdOutp
         if (state.An_UnderVoltage) baseLL = settings.RatedVoltageLL * 0.5;
         else if (state.An_OverVoltage) baseLL = settings.RatedVoltageLL * 1.25;
 
-        state.BusVoltage.Set(Math.Sqrt(2.0) * baseLL);
+        // Bus voltage sags from the no-load peak (sqrt(2) * V_LL) towards the six-pulse average as the motor loads the DC link.
+        double loadPu = Math.Clamp(inputs.MotorCurrentFeedback / Math.Max(1e-6, settings.MaxCurrent), 0.0, 1.0);
+        state.BusVoltage.Set(baseLL * (Math.Sqrt(2.0) - (Math.Sqrt(2.0) - settings.BusFullLoadFactor) * loadPu));
 
         if (state.An_GroundFault) simState.Trip(VfdFaultCode.GroundFault);
 
@@ -51,9 +53,10 @@ public class Vfd(VfdSettings settings, VfdState state, VfdInputs inputs, VfdOutp
 
     private void DetectTrips(ISimState simState)
     {
-        if (state.BusVoltage < settings.UnderVoltPUNomDC * Math.Sqrt(2.0) * settings.RatedVoltageLL)
+        double vdcNom = state.VdcNom > 0 ? state.VdcNom : Math.Sqrt(2.0) * settings.RatedVoltageLL;
+        if (state.BusVoltage < settings.UnderVoltPUNomDC * vdcNom)
             simState.Trip(VfdFaultCode.UnderVoltage);
-        if (state.BusVoltage > settings.OverVoltPUNomDC * Math.Sqrt(2.0) * settings.RatedVoltageLL)
+        if (state.BusVoltage > settings.OverVoltPUNomDC * vdcNom)
             simState.Trip(VfdFaultCode.OverVoltage);
         if (inputs.MotorCurrentFeedback > settings.OverCurrentMultiple * settings.MaxCurrent)
             simState.Trip(VfdFaultCode.OverCurrent);

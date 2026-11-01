@@ -88,7 +88,8 @@ public sealed class ConveyorMachine : IMachineModule
         var vfdSettings = new VfdSettings();
         var vfdState = new VfdState();
         vfdState.TargetFrequency.Set(options.TargetFrequencyHz);
-        vfdState.BusVoltage.Set(Math.Sqrt(2) * vfdSettings.RatedVoltageLL);
+        vfdState.VdcNom.Set(Math.Sqrt(2) * vfdSettings.RatedVoltageLL);
+        vfdState.BusVoltage.Set(vfdState.VdcNom);
         vfdState.HeatsinkTemp.Set(vfdSettings.AmbientTemp);
         var vfdInputs = new VfdInputs();
         var vfdOutputs = new VfdOutputs();
@@ -150,6 +151,7 @@ public sealed class ConveyorMachine : IMachineModule
             result.Add(SimulationTag.Create($"{root}.Vfd.OutputFrequency", () => segment.VfdOutputs.OutputFrequency.Value));
             result.Add(SimulationTag.Create($"{root}.Vfd.OutputVoltage", () => segment.VfdOutputs.OutputVoltage.Value));
             result.Add(SimulationTag.Create($"{root}.Vfd.BusVoltage", () => segment.VfdState.BusVoltage.Value));
+            result.Add(SimulationTag.Create($"{root}.Vfd.BusVoltageNominal", () => segment.VfdState.VdcNom.Value));
             result.Add(SimulationTag.Create($"{root}.Vfd.HeatsinkTemp", () => segment.VfdState.HeatsinkTemp.Value));
             result.Add(SimulationTag.Create($"{root}.Motor.SpeedRpm", () => segment.MotorState.SpeedRpm.Value));
             result.Add(SimulationTag.Create($"{root}.Motor.PhaseCurrent", () => segment.MotorOutputs.PhaseCurrent.Value));

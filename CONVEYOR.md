@@ -50,7 +50,7 @@ This Vfd → Motor → Vfd-feedback ordering (steps i–v) is the concrete examp
 
 Three-phase supply — `NominalVoltageLL` 400 V, `NominalFrequency` 50 Hz, slews toward target at 500 V/s and 10 Hz/s.
 
-VFD (per segment; background and model coverage in [docs/vfd/VFD.md](docs/vfd/VFD.md)) — rated 400 V / 50 Hz, `Accel`/`Decel` 10 Hz/s, `VoltBoost` 7% at low speed (V/f + boost curve), heatsink thermal RC (`ThermalTimeConstant` 40 s, ambient 25 °C, trip above 85 °C), trips on under/over-voltage (0.55/1.20 × nominal DC bus), over-current (1.6× `MaxCurrent`=30 A), or ground fault/phase-loss anomalies.
+VFD (per segment; background and model coverage in [docs/vfd/VFD.md](docs/vfd/VFD.md)) — rated 400 V / 50 Hz, `Accel`/`Decel` 10 Hz/s, `VoltBoost` 7% at low speed (V/f + boost curve), heatsink thermal RC (`ThermalTimeConstant` 40 s, ambient 25 °C, trip above 85 °C), DC bus voltage sags from √2·V_LL at no load to 1.35·V_LL at full current (`BusFullLoadFactor`) and trips on under/over-voltage (0.55/1.20 × `VdcNom` = √2·rated V_LL), over-current (1.6× `MaxCurrent`=30 A), or ground fault/phase-loss anomalies.
 
 Induction motor (per segment) — ~7.5 kW / 1440 rpm rated, 2 pole pairs, inertia 0.20 kg·m², nominal slip 3%, torque capped at 2.2× rated. Speed comes from net torque (electromagnetic − load) over inertia; phase current from torque and the V/f margin.
 
@@ -90,7 +90,8 @@ Supply.LineLineVoltage                          Supply.Frequency
 Packages.Count                                   Packages.Positions (array)
 Packages.Masses (array)
 Segments.Segment{i}.Vfd.OutputFrequency          Segments.Segment{i}.Vfd.OutputVoltage
-Segments.Segment{i}.Vfd.BusVoltage               Segments.Segment{i}.Vfd.HeatsinkTemp
+Segments.Segment{i}.Vfd.BusVoltage               Segments.Segment{i}.Vfd.BusVoltageNominal
+Segments.Segment{i}.Vfd.HeatsinkTemp
 Segments.Segment{i}.Motor.SpeedRpm               Segments.Segment{i}.Motor.PhaseCurrent
 ```
 

@@ -42,6 +42,8 @@ def init(segment_count, length_m, target_freq_hz, spawn_period_s, package_mass_k
             "vfd": {
                 "target_freq": target_freq_hz,
                 "bus_v": math.sqrt(2.0) * supply_rated_ll,
+                "vdc_nom": math.sqrt(2.0) * supply_rated_ll,
+                "_motor_current_feedback": 0.0,
                 "heatsink_temp": 25.0,
                 "out_freq": 0.0,
                 "out_v": 0.0,
@@ -86,6 +88,7 @@ def init(segment_count, length_m, target_freq_hz, spawn_period_s, package_mass_k
             "vfd_overcurrent_mult": 1.6,
             "vfd_undervolt_pu_dc": 0.55,
             "vfd_overvolt_pu_dc": 1.20,
+            "vfd_bus_full_load_factor": 1.35,
             # InductionMotorSettings defaults
             "motor_pole_pairs": 2,
             "motor_rated_f": 50.0,
@@ -155,9 +158,9 @@ def _vfd_thermal_step(vfd, opt, dt, conduction_loss_w):
 def _vfd_detect_trips(s, seg):
     opt = s["options"]
     vfd = seg["vfd"]
-    if vfd["bus_v"] < opt["vfd_undervolt_pu_dc"] * math.sqrt(2.0) * opt["vfd_rated_ll"]:
+    if vfd["bus_v"] < opt["vfd_undervolt_pu_dc"] * vfd["vdc_nom"]:
         _trip(s, "UnderVoltage")
-    if vfd["bus_v"] > opt["vfd_overvolt_pu_dc"] * math.sqrt(2.0) * opt["vfd_rated_ll"]:
+    if vfd["bus_v"] > opt["vfd_overvolt_pu_dc"] * vfd["vdc_nom"]:
         _trip(s, "OverVoltage")
     if vfd["_motor_current_feedback"] > opt["vfd_overcurrent_mult"] * opt["vfd_max_current"]:
         _trip(s, "OverCurrent")
@@ -173,7 +176,9 @@ def _step_segment(s, seg, dt, supply_v):
 
     # --- Vfd.Step ---
     base_ll = supply_v if supply_v > 0 else opt["vfd_rated_ll"]
-    vfd["bus_v"] = math.sqrt(2.0) * base_ll
+    # Bus voltage sags from the no-load peak (sqrt(2) * V_LL) towards the six-pulse average as the motor loads the DC link.
+    load_pu = min(1.0, max(0.0, vfd["_motor_current_feedback"] / max(1e-6, opt["vfd_max_current"])))
+    vfd["bus_v"] = base_ll * (math.sqrt(2.0) - (math.sqrt(2.0) - opt["vfd_bus_full_load_factor"]) * load_pu)
     # An_GroundFault is always False in this v1 scope.
 
     if not s["running"]:
@@ -311,6 +316,7 @@ def _snapshot(s):
         tags[f"{root}.Vfd.OutputFrequency"] = seg["vfd"]["out_freq"]
         tags[f"{root}.Vfd.OutputVoltage"] = seg["vfd"]["out_v"]
         tags[f"{root}.Vfd.BusVoltage"] = seg["vfd"]["bus_v"]
+        tags[f"{root}.Vfd.BusVoltageNominal"] = seg["vfd"]["vdc_nom"]
         tags[f"{root}.Vfd.HeatsinkTemp"] = seg["vfd"]["heatsink_temp"]
         tags[f"{root}.Motor.SpeedRpm"] = seg["motor"]["speed_rpm"]
         tags[f"{root}.Motor.PhaseCurrent"] = seg["motor"]["phase_current"]
