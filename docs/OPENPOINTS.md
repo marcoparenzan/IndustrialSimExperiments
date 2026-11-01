@@ -7,7 +7,7 @@ Things that are decided but not obvious, known defects, and things that were **n
 | Topic | Current state | Question |
 |---|---|---|
 | Third-party infographics | Eight PNG files in `docs/images/vfd/` are git-ignored; `SOURCES.md` lists them. The repository is public. | Is local-only the right call, or should they be removed from the repository folder too? |
-| `LICENSE.txt` | Says "Copyright (c) 2025-2026 Marco Parenzan"; the global rule is "2026". | Change the year range? Not changed here. |
+| `LICENSE.txt` | Copyright year set to "2026" (it was "2025-2026"). | Done. |
 | `PySharp.Interpreter` | Preview package `2.6.1-net11-preview.2` from the local feed; the old `2.0.0` is gone. | Publish a stable net11 package, or keep the local feed documented. |
 | The original `D:\Dev\2026\IoTHub\OpcUaExperiments` folder | Untouched; its content now lives in `src/OpcUaCourse` and `docs/opcua-course`. | Move it to `BuildArtifacts\trash` (not done: only you decide). |
 | `.ralfai/` folder in the repository root | Untracked; created by another tool, not by this work. | Add to `.gitignore` or delete. |
