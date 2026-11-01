@@ -6,7 +6,7 @@ EncodeableFactory.GlobalFactory.AddEncodeableType(typeof(UaCourse.Models.RecipeD
 var command = args.FirstOrDefault() ?? "help";
 if (command == "help")
 {
-    Console.WriteLine("UaCourse: server | client <browse|read|write|methods|subscribe|events|types|custom-types|paths|errors|ranges|model|method-errors|all> | verify");
+    Console.WriteLine("UaCourse: server | client <browse|read|write|methods|subscribe|events|types|custom-types|paths|errors|ranges|model|method-errors|all> | client forgesim [endpoint] | verify");
     return;
 }
 try
@@ -21,6 +21,11 @@ try
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; stopped.TrySetResult(); };
         await stopped.Task;
         server.Stop();
+    }
+    else if (command == "client" && args.ElementAtOrDefault(1) == "forgesim")
+    {
+        // Needs ForgeSimApp running (default opc.tcp://localhost:4840/ForgeSim); not part of `all` or `verify`.
+        await Lessons.RunForgeSimAsync(args.ElementAtOrDefault(2) ?? Lessons.ForgeSimEndpoint);
     }
     else if (command is "client" or "verify")
     {

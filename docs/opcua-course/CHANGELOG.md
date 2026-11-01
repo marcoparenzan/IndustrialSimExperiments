@@ -7,6 +7,7 @@
 - Server endpoint moved to port 4841 so that it can run next to ForgeSimApp (4840).
 - Certificates, the NodeSet2 export and the ASP.NET keys no longer go to a `.artifacts` folder inside the repository: they use `UACOURSE_ARTIFACTS_ROOT` or `%LOCALAPPDATA%\UaCourse`.
 - Whole course translated to English: documents, lesson file names, UI texts, lab and server messages, comments.
+- New lab `client forgesim [endpoint]` and lesson 19: browse, read and subscribe to the VFD of a `ForgeSimApp` conveyor segment, then design a `VfdType`.
 
 ## 0.4.0 — 2026-10-05
 

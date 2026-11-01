@@ -12,6 +12,8 @@ Run on Windows, .NET SDK 11.0.100 (release candidate), OPC UA SDK 1.5.376.244, a
 | Web app on port 5080, `/`, `/dashboards/water`, `/dashboards/reactor` | HTTP 200 |
 | Headless Chromium screenshots of the three pages | Opened and inspected: English texts, connection chip "OPC UA · SignAndEncrypt · subscription 250 ms", live values on both synoptics |
 
+ForgeSim lab (`client forgesim`) against a running `ForgeSimApp` (Python conveyor, OPC UA only): exit code 0; namespace `urn:IndustrialSim:Conveyor (PySharp)` found, five tags read Good, a Write rejected with BadNotWritable, `BusVoltage` 27–32 notifications in 5 s, `OutputFrequency` 1 (constant after the ramp). The same run showed that every node was listed twice in Browse; fixed in `OpcUaServerLib` (10 entries instead of 20).
+
 Not verified in this run: clicking the commands in the browser, the automated layout runner (`check-layout.cjs`, which needs the Playwright npm package), mobile widths, and the page for an unknown dashboard identifier.
 
 ## Home and template 0.4.0 — 2026-10-05

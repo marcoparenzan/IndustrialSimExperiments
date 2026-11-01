@@ -34,7 +34,9 @@ dotnet run --project src/OpcUaCourse/UaCourse -- client subscribe
 dotnet run --project src/OpcUaCourse/UaCourse -- client events
 ```
 
-`client all` runs them in sequence. `verify` starts its own server: stop the external server first. Subscribe and events end when a notification arrives; they time out after 10 s if none does.
+`dotnet run --project src/OpcUaCourse/UaCourse -- client forgesim [endpoint]` is different: it connects to the `ForgeSimApp` simulator (default `opc.tcp://localhost:4840/ForgeSim`, start it with `dotnet run --project src/ForgeSimApp -- --protocols OpcUa`) and belongs to [lesson 19](lessons/19-forgesim-vfd.md). It is not part of `all` or `verify`.
+
+`client all` runs the thirteen course labs in sequence. `verify` starts its own server: stop the external server first. Subscribe and events end when a notification arrives; they time out after 10 s if none does.
 
 `ranges` verifies `Profile[1:2] = [40,60]` and a range beyond the data. `model` verifies HasTypeDefinition, the Mandatory rule and the DataType of the declaration/instance. `method-errors` verifies BadInvalidState on the second Start and the integrity of the setpoint after a rejected Call; it stops the reactor in its cleanup. The individual labs are separate files in `src/OpcUaCourse/UaCourse/Labs` and correspond to the solutions of lessons 05, 06 and 08.
 

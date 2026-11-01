@@ -4,7 +4,7 @@ A progressive lab with a simulated OPC UA server and a Blazor Server application
 
 The labels receive DataValues through MonitoredItems and Publish. The buttons run Write and Call; events arrive through a subscription to BaseEventType. The browser talks to Blazor over SignalR: it is the ASP.NET process that speaks OPC UA.
 
-The course lives in the ForgeIndustrial repository (`src/OpcUaCourse`) and can also be pointed at the `ForgeSimApp` simulator, which exposes its own OPC UA server on port 4840. The course server uses port **4841** so that both can run at the same time.
+The course lives in the ForgeIndustrial repository (`src/OpcUaCourse`) and can also be pointed at the `ForgeSimApp` simulator, which exposes its own OPC UA server on port 4840 ([lesson 19](lessons/19-forgesim-vfd.md)). The course server uses port **4841** so that both can run at the same time.
 
 ## Quick start
 

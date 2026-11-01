@@ -1,6 +1,6 @@
 # Teaching path
 
-Lessons 01–12 have labs on the available code; lesson 13 combines the current security with the design of authorizations. Lessons 14–18 are deep-dives with extensions still to be implemented. Lesson 09 includes a custom DataType, a structured method, a subscription and an independent dynamic client. Every lesson connects concepts, code, experiments and verifications.
+Lessons 01–12 have labs on the available code; lesson 13 combines the current security with the design of authorizations. Lessons 14–18 are deep-dives with extensions still to be implemented. Lesson 19 connects the course client to the `ForgeSimApp` simulator of this repository and has an executable lab. Lesson 09 includes a custom DataType, a structured method, a subscription and an independent dynamic client. Every lesson connects concepts, code, experiments and verifications.
 
 1. [From the tag to the information model](01-fundamentals.md)
 2. [Discovery, endpoints, SecureChannel and Session](02-sessions.md)
@@ -20,8 +20,9 @@ Lessons 01–12 have labs on the available code; lesson 13 combines the current 
 16. [State machines, FileType and process contracts](16-state-files.md)
 17. [PubSub, DataSets and transports](17-pubsub.md)
 18. [NodeSet, companion specifications, diagnostics and the final project](18-interoperability.md)
+19. [A real simulator: browsing ForgeSim and modeling a VfdType](19-forgesim-vfd.md)
 
-The `verify` command covers thirteen client/server labs, not the unimplemented extensions. For the complete commands see [USAGE](../USAGE.md).
+The `verify` command covers thirteen client/server labs, not the unimplemented extensions and not the ForgeSim lab (it needs ForgeSimApp running). For the complete commands see [USAGE](../USAGE.md).
 
 ## How to follow the course
 
@@ -48,5 +49,6 @@ Paths are relative to the repository root: the code lives under `src/OpcUaCourse
 | 12 | Server stop/restart | [UaConnection](../../../src/OpcUaCourse/UaCourse.Web/Services/UaConnection.cs) | Cache invalidated and new subscriptions |
 | 13 | Current trust + roles design | [Configuration](../../../src/OpcUaCourse/UaCourse/Configuration.cs) | Distinguish channel, user and authorization |
 | 14–18 | Advanced projects | Contracts and exercises in the chapters | Expected/actual criteria for each extension |
+| 19 | `client forgesim` (needs ForgeSimApp on port 4840) | [ForgeSim lab](../../../src/OpcUaCourse/UaCourse/Labs/RunForgeSim.cs) | Namespace by URI prefix, browse paths, read-only tags, subscription |
 
 The implementations are separate in `src/OpcUaCourse/UaCourse/Labs`; `Lessons.cs` keeps the dispatch and the helpers. The custom type is available with manual encodeable code and a partial NodeSet2 export; automatic generation remains future work. A&C, history, FileType and PubSub still require dedicated modules.
