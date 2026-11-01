@@ -94,7 +94,8 @@ Packages.Masses (array)
 Segments.Segment{i}.Vfd.OutputFrequency          Segments.Segment{i}.Vfd.OutputVoltage
 Segments.Segment{i}.Vfd.BusVoltage               Segments.Segment{i}.Vfd.BusVoltageNominal
 Segments.Segment{i}.Vfd.HeatsinkTemp           Segments.Segment{i}.Vfd.BrakeChopperActive (bool)
-Segments.Segment{i}.Vfd.BrakingPowerW
+Segments.Segment{i}.Vfd.BrakingPowerW            Segments.Segment{i}.Vfd.FaultRelay (bool)
+Segments.Segment{i}.Vfd.RunningRelay (bool)      Segments.Segment{i}.Vfd.AnalogOutFrequency (0-10 V)
 Segments.Segment{i}.Motor.SpeedRpm               Segments.Segment{i}.Motor.PhaseCurrent
 ```
 

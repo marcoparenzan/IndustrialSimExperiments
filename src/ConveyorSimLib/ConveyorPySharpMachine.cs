@@ -112,6 +112,9 @@ public sealed class ConveyorPySharpMachine : IMachineModule
             result.Add(SimulationTag.Create($"{root}.Vfd.BusVoltageNominal", () => ReadDouble($"{root}.Vfd.BusVoltageNominal")));
             result.Add(SimulationTag.Create($"{root}.Vfd.BrakeChopperActive", () => (bool)lastTags[$"{root}.Vfd.BrakeChopperActive"]!));
             result.Add(SimulationTag.Create($"{root}.Vfd.BrakingPowerW", () => ReadDouble($"{root}.Vfd.BrakingPowerW")));
+            result.Add(SimulationTag.Create($"{root}.Vfd.FaultRelay", () => (bool)lastTags[$"{root}.Vfd.FaultRelay"]!));
+            result.Add(SimulationTag.Create($"{root}.Vfd.RunningRelay", () => (bool)lastTags[$"{root}.Vfd.RunningRelay"]!));
+            result.Add(SimulationTag.Create($"{root}.Vfd.AnalogOutFrequency", () => ReadDouble($"{root}.Vfd.AnalogOutFrequency")));
             result.Add(SimulationTag.Create($"{root}.Vfd.HeatsinkTemp", () => ReadDouble($"{root}.Vfd.HeatsinkTemp")));
             result.Add(SimulationTag.Create($"{root}.Motor.SpeedRpm", () => ReadDouble($"{root}.Motor.SpeedRpm")));
             result.Add(SimulationTag.Create($"{root}.Motor.PhaseCurrent", () => ReadDouble($"{root}.Motor.PhaseCurrent")));

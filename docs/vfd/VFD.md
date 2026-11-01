@@ -109,8 +109,9 @@ Source: `src/VfdSimLib` (C#) and the matching section of `src/ConveyorSimLib/Scr
 | Regenerative motor operation | Modelled: negative slip gives negative torque and negative `ShaftPowerW`, fed to the drive as `MotorPowerFeedback` | `InductionMotor.Step`, `VfdInputs.MotorPowerFeedback` | |
 | Brake chopper and braking resistor | Modelled: on above 1.15 × `VdcNom`, off below 1.10 ×, dissipates `V²/R`; without a resistor a fast stop trips `OverVoltage` | `Vfd.DcLinkStep`, `VfdSettings.BrakingResistorOhms`; tags `Vfd.BrakeChopperActive`, `Vfd.BrakingPowerW` | |
 | Deceleration stall prevention (drive extends the ramp instead of tripping) | Not modelled | | OPENPOINTS |
-| Digital inputs, analog reference, relay and analog outputs | Not modelled; the target frequency is a single setting | `VfdState.TargetFrequency` | S3c |
-| Reverse rotation | Not modelled | | S3c (only if the motor model supports it) |
+| Control terminals: run forward, multi-step speeds (3 inputs, 7 steps), analog reference (0–10 V or 4–20 mA), fault reset | Modelled in `VfdSimLib` (`VfdControlSource.Terminals`); the Conveyor uses the default `Setpoint` mode, so the Python port does not carry this input logic | `Vfd.ApplyTerminalControl`, `VfdInputs`, `VfdSettings.MultiStepFrequencies/AnalogMode` | |
+| Output terminals: fault relay, running relay, analog frequency output (AFM) | Modelled; exposed as Conveyor tags (both implementations) | `Vfd.UpdateOutputTerminals`, `VfdOutputs` | |
+| Reverse rotation | Not modelled (forward only; the motor model has no negative-frequency drive) | | OPENPOINTS |
 | Harmonics, THD | Not modelled | | S3d (indicator only) |
 | Bearing currents | Not modelled; the motor has a bearing-wear load anomaly | `InductionMotorState.An_BearingWear` | documentation only |
 | Vector control, DTC | Not modelled | | out of scope |

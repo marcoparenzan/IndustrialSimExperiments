@@ -49,6 +49,9 @@ def init(segment_count, length_m, target_freq_hz, spawn_period_s, package_mass_k
                 "excess_energy_j": 0.0,
                 "chopper_active": False,
                 "braking_power_w": 0.0,
+                "fault_relay": False,
+                "running_relay": False,
+                "analog_out_frequency": 0.0,
                 "heatsink_temp": 25.0,
                 "out_freq": 0.0,
                 "out_v": 0.0,
@@ -100,6 +103,7 @@ def init(segment_count, length_m, target_freq_hz, spawn_period_s, package_mass_k
             "vfd_brake_chopper_on_pu": 1.15,
             "vfd_brake_chopper_off_pu": 1.10,
             "vfd_bus_discharge_tc": 0.1,
+            "vfd_max_output_frequency": 50.0,
             # InductionMotorSettings defaults
             "motor_pole_pairs": 2,
             "motor_rated_f": 50.0,
@@ -191,6 +195,13 @@ def _vfd_dc_link_step(vfd, opt, dt):
     vfd["excess_energy_j"] = energy
     vfd["braking_power_w"] = brake_w
     vfd["bus_v"] = math.sqrt(bus_static * bus_static + 2.0 * energy / cap)
+
+
+def _vfd_update_output_terminals(s, vfd, opt):
+    """Vfd.UpdateOutputTerminals: fault relay, running relay and the 0-10 V frequency output."""
+    vfd["fault_relay"] = s["active_trip"] is not None
+    vfd["running_relay"] = s["running"] and vfd["out_freq"] > 0
+    vfd["analog_out_frequency"] = 10.0 * min(1.0, max(0.0, vfd["out_freq"] / max(1e-6, opt["vfd_max_output_frequency"])))
 
 
 def _vfd_detect_trips(s, seg):
@@ -296,6 +307,7 @@ def _step_segment(s, seg, dt, supply_v):
     _vfd_thermal_step(vfd, opt, dt, losses_w)
     _vfd_dc_link_step(vfd, opt, dt)
     _vfd_detect_trips(s, seg)
+    _vfd_update_output_terminals(s, vfd, opt)
 
 
 def _belt_speed(opt, rpm):
@@ -373,6 +385,9 @@ def _snapshot(s):
         tags[f"{root}.Vfd.BusVoltageNominal"] = seg["vfd"]["vdc_nom"]
         tags[f"{root}.Vfd.BrakeChopperActive"] = seg["vfd"]["chopper_active"]
         tags[f"{root}.Vfd.BrakingPowerW"] = seg["vfd"]["braking_power_w"]
+        tags[f"{root}.Vfd.FaultRelay"] = seg["vfd"]["fault_relay"]
+        tags[f"{root}.Vfd.RunningRelay"] = seg["vfd"]["running_relay"]
+        tags[f"{root}.Vfd.AnalogOutFrequency"] = seg["vfd"]["analog_out_frequency"]
         tags[f"{root}.Vfd.HeatsinkTemp"] = seg["vfd"]["heatsink_temp"]
         tags[f"{root}.Motor.SpeedRpm"] = seg["motor"]["speed_rpm"]
         tags[f"{root}.Motor.PhaseCurrent"] = seg["motor"]["phase_current"]

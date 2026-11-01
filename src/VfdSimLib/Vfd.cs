@@ -4,8 +4,12 @@ namespace VfdSimLib;
 
 public class Vfd(VfdSettings settings, VfdState state, VfdInputs inputs, VfdOutputs outputs) : IDeviceSimulator
 {
+    private bool faultResetWasHigh;
+
     public void Step(double dt, ISimState simState)
     {
+        if (settings.ControlSource == VfdControlSource.Terminals) ApplyTerminalControl(simState);
+
         double baseLL = inputs.SupplyVoltageLL > 0 ? inputs.SupplyVoltageLL : settings.RatedVoltageLL;
         if (state.An_UnderVoltage) baseLL = settings.RatedVoltageLL * 0.5;
         else if (state.An_OverVoltage) baseLL = settings.RatedVoltageLL * 1.25;
@@ -42,6 +46,33 @@ public class Vfd(VfdSettings settings, VfdState state, VfdInputs inputs, VfdOutp
         ThermalStep(dt, lossesW);
         DcLinkStep(dt);
         DetectTrips(simState);
+        UpdateOutputTerminals(simState);
+    }
+
+    private void ApplyTerminalControl(ISimState simState)
+    {
+        bool reset = inputs.FaultReset;
+        if (reset && !faultResetWasHigh && simState.ActiveTrip != FaultCode.None) simState.ResetTrip();
+        faultResetWasHigh = reset;
+        state.TargetFrequency.Set(inputs.RunForward ? ReferenceFrequency() : 0.0);
+    }
+
+    // Multi-step selection overrides the analog reference, as on most compact drives.
+    private double ReferenceFrequency()
+    {
+        int code = (inputs.MultiStep1 ? 1 : 0) | (inputs.MultiStep2 ? 2 : 0) | (inputs.MultiStep3 ? 4 : 0);
+        if (code > 0) return settings.MultiStepFrequencies[Math.Min(code, settings.MultiStepFrequencies.Length) - 1];
+        double fraction = settings.AnalogMode == VfdAnalogInputMode.Current4To20
+            ? (inputs.AnalogSpeedRef - 4.0) / 16.0
+            : inputs.AnalogSpeedRef / 10.0;
+        return Math.Clamp(fraction, 0.0, 1.0) * settings.MaxOutputFrequency;
+    }
+
+    private void UpdateOutputTerminals(ISimState simState)
+    {
+        outputs.FaultRelay.Set(simState.ActiveTrip != FaultCode.None);
+        outputs.RunningRelay.Set(simState.Running && outputs.OutputFrequency > 0);
+        outputs.AnalogOutFrequency.Set(10.0 * Math.Clamp(outputs.OutputFrequency / Math.Max(1e-6, settings.MaxOutputFrequency), 0.0, 1.0));
     }
 
     // Regenerated power charges the DC link above the level Step() computed from the load; the brake chopper,

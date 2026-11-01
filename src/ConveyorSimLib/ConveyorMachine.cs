@@ -162,6 +162,9 @@ public sealed class ConveyorMachine : IMachineModule
             result.Add(SimulationTag.Create($"{root}.Vfd.BusVoltageNominal", () => segment.VfdState.VdcNom.Value));
             result.Add(SimulationTag.Create($"{root}.Vfd.BrakeChopperActive", () => segment.VfdState.BrakeChopperActive.Value));
             result.Add(SimulationTag.Create($"{root}.Vfd.BrakingPowerW", () => segment.VfdState.BrakingPowerW.Value));
+            result.Add(SimulationTag.Create($"{root}.Vfd.FaultRelay", () => segment.VfdOutputs.FaultRelay.Value));
+            result.Add(SimulationTag.Create($"{root}.Vfd.RunningRelay", () => segment.VfdOutputs.RunningRelay.Value));
+            result.Add(SimulationTag.Create($"{root}.Vfd.AnalogOutFrequency", () => segment.VfdOutputs.AnalogOutFrequency.Value));
             result.Add(SimulationTag.Create($"{root}.Vfd.HeatsinkTemp", () => segment.VfdState.HeatsinkTemp.Value));
             result.Add(SimulationTag.Create($"{root}.Motor.SpeedRpm", () => segment.MotorState.SpeedRpm.Value));
             result.Add(SimulationTag.Create($"{root}.Motor.PhaseCurrent", () => segment.MotorOutputs.PhaseCurrent.Value));
