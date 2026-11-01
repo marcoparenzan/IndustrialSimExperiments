@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- All build output (bin/obj/publish) goes outside the repository. Override with -p:ArtifactsPath=... -->
+    <ArtifactsPath Condition="'$(ArtifactsPath)' == ''">D:\Dev\BuildArtifacts\IndustrialSimExperiments\build</ArtifactsPath>
+  </PropertyGroup>
+</Project>

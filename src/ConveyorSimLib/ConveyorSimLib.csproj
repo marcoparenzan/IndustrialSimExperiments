@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -16,7 +16,7 @@
 		<!-- The whole point of this module: no VfdSimLib/InductionMotorSimLib/ThreePhaseSupplySimLib/
          PackageSimLib reference here — that physics is reimplemented in Scripts/conveyor_machine.py
          and executed by PySharp instead. -->
-		<PackageReference Include="PySharp.Interpreter" Version="2.0.0" />
+		<PackageReference Include="PySharp.Interpreter" Version="2.6.1-net11-preview.2" />
 	</ItemGroup>
 
 	<ItemGroup>

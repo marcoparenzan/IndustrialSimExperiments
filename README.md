@@ -1,8 +1,8 @@
 # IndustrialSimExperiments
 
-Modular industrial-process simulation platform targeting .NET 10 / C# 13. A configurable **machine module** (e.g. a conveyor) is stepped in real time and exposed over one or more pluggable **protocol adapters** (OPC UA, MQTT, a live console dashboard), driven by a [Spectre.Console.Cli](https://spectreconsole.net/cli/) command-line interface, so simulated processes can be browsed and polled with off-the-shelf industrial tooling.
+Modular industrial-process simulation platform targeting .NET 11. A configurable **machine module** (e.g. a conveyor) is stepped in real time and exposed over one or more pluggable **protocol adapters** (OPC UA, MQTT, a live console dashboard), driven by a [Spectre.Console.Cli](https://spectreconsole.net/cli/) command-line interface, so simulated processes can be browsed and polled with off-the-shelf industrial tooling.
 
-Requires the .NET 10 SDK. NuGet: `OPCFoundation.NetStandard.Opc.Ua` for the OPC UA server, `MQTTnet` + `MQTTnet.Server` for the MQTT broker, `Spectre.Console.Cli` for the command-line interface, `Spectre.Console` for the live dashboard, `PySharp.Interpreter` for the Conveyor's Python-scripted variant (see [CONVEYOR.md](CONVEYOR.md)).
+Requires the .NET 11 SDK. NuGet: `OPCFoundation.NetStandard.Opc.Ua` for the OPC UA server, `MQTTnet` + `MQTTnet.Server` for the MQTT broker, `Spectre.Console.Cli` for the command-line interface, `Spectre.Console` for the live dashboard, `PySharp.Interpreter` for the Conveyor's Python-scripted variant (see [CONVEYOR.md](CONVEYOR.md)).
 
 ## Solution map
 
@@ -175,7 +175,7 @@ Covers `Bindable` semantics, timed events, VFD ramp/trip behavior, motor acceler
 dotnet build src/ForgeIndustrial.slnx
 ```
 
-Requires the .NET 10 SDK. Restores `OPCFoundation.NetStandard.Opc.Ua` for `OpcUaServerLib`, `MQTTnet`/`MQTTnet.Server` for `MqttServerLib`, `Spectre.Console` for `ConsoleDashboardLib`, `Spectre.Console.Cli` for `ForgeSimApp`, and `PySharp.Interpreter` for `ConveyorSimLib`'s `ConveyorPySharpMachine`.
+Requires the .NET 11 SDK. Restores `OPCFoundation.NetStandard.Opc.Ua` for `OpcUaServerLib`, `MQTTnet`/`MQTTnet.Server` for `MqttServerLib`, `Spectre.Console` for `ConsoleDashboardLib`, `Spectre.Console.Cli` for `ForgeSimApp`, and `PySharp.Interpreter` for `ConveyorSimLib`'s `ConveyorPySharpMachine`.
 
 ## Safety
 
