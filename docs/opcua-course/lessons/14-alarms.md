@@ -1,49 +1,49 @@
-# Alarms & Conditions: stato, acknowledge e refresh
+# Alarms & Conditions: state, acknowledge and refresh
 
-## Concetti
+## Concepts
 
-Approfondimento progettuale. ConditionType rappresenta uno stato significativo; AlarmConditionType aggiunge ActiveState e semantica d'allarme. AckedState e ConfirmedState sono azioni distinte. Retain indica che la condizione deve essere presentata al client. Le branch preservano stati precedenti che richiedono ancora attenzione.
+Design deep-dive. ConditionType represents a significant state; AlarmConditionType adds ActiveState and alarm semantics. AckedState and ConfirmedState are distinct actions. Retain indicates that the condition must be presented to the client. Branches preserve previous states that still require attention.
 
-## Esperimento
+## Experiment
 
-Progetta un allarme di livello basso per Well1 con soglia e isteresi. Il server attuale emette solo BaseEventType: non ci sono Acknowledge, Confirm né ConditionRefresh.
+Design a low-level alarm for Well1 with a threshold and hysteresis. The current server emits only BaseEventType: there is no Acknowledge, no Confirm and no ConditionRefresh.
 
-## Nel codice C#
+## In the C# code
 
-Estendi il NodeManager con un tipo d'allarme standard e metodi standard. Il client seleziona ConditionId, EventId, Retain, ActiveState/Id e AckedState/Id. La vista allarmi deve mantenere un elenco per condizione/branch, diverso dal log cronologico.
+Extend the NodeManager with a standard alarm type and standard methods. The client selects ConditionId, EventId, Retain, ActiveState/Id and AckedState/Id. The alarm view must keep a list per condition/branch, different from the chronological log.
 
-## Esercizio e verifica
+## Exercise and verification
 
-Attiva l'allarme, acknowledge, rientro, reconnect e ConditionRefresh. Verifica stato retained dopo reconnect e acknowledge con EventId scaduto. Distingui rientro fisico da presa visione.
+Activate the alarm, acknowledge, return to normal, reconnect and ConditionRefresh. Verify the retained state after reconnect and an acknowledge with an expired EventId. Distinguish the physical return to normal from the acknowledgement.
 
-## Errore da evitare
+## Mistake to avoid
 
-Non implementare acknowledge scrivendo un Boolean a caso. I servizi e metodi delle condizioni hanno regole di stato e identificatori specifici.
+Do not implement acknowledge by writing a random Boolean. The services and methods of the conditions have specific state rules and identifiers.
 
-## Obiettivi e confine del laboratorio
+## Goals and boundary of the lab
 
-Tempo indicativo: 2–3 ore. Questa lezione non usa il log BaseEventType come se fosse già un sistema allarmi. Il server corrente **non implementa Alarms & Conditions**. L'obiettivo è definire e verificare il contratto prima di aggiungere i relativi NodeState e metodi standard.
+Estimated time: 2–3 hours. This lesson does not use the BaseEventType log as if it were already an alarm system. The current server **does not implement Alarms & Conditions**. The goal is to define and verify the contract before adding the corresponding NodeStates and standard methods.
 
-Parti da Well1: genera un allarme quando il livello scende sotto una soglia e definisci un'isteresi per evitare oscillazioni continue. Il valore misurato e lo stato dell'allarme sono informazioni differenti.
+Start from Well1: generate an alarm when the level falls below a threshold and define a hysteresis to avoid continuous oscillations. The measured value and the state of the alarm are different pieces of information.
 
-## Stato fisico, presa visione e permanenza
+## Physical state, acknowledgement and persistence
 
-| Campo | Domanda |
+| Field | Question |
 |---|---|
-| ActiveState | La situazione d'allarme è attualmente attiva? |
-| AckedState | È stata presa in carico/riconosciuta? |
-| ConfirmedState | È stata confermata, se il modello lo richiede? |
-| EnabledState | La condizione è abilitata? |
-| Retain | Deve restare nell'elenco corrente del client? |
-| BranchId | A quale stato/branch appartiene la notifica? |
+| ActiveState | Is the alarm situation currently active? |
+| AckedState | Has it been taken over/acknowledged? |
+| ConfirmedState | Has it been confirmed, if the model requires it? |
+| EnabledState | Is the condition enabled? |
+| Retain | Must it stay in the client's current list? |
+| BranchId | Which state/branch does the notification belong to? |
 
-Acknowledge non deve spegnere una pompa né risolvere il guasto per definizione. Il rientro fisico non equivale automaticamente ad acknowledge. La policy Retain dipende dal tipo e dagli stati che il server mantiene: non fissarla sempre uguale ad ActiveState.
+Acknowledge must not stop a pump or fix the fault by definition. The physical return to normal is not automatically equivalent to an acknowledge. The Retain policy depends on the type and on the states the server keeps: do not always fix it equal to ActiveState.
 
-Un ConditionId identifica la condizione; EventId identifica un'occorrenza/stato notificato. Un server può mantenere branch precedenti quando occorre ancora riconoscere uno stato passato. Usare un solo Boolean nel browser perde questa distinzione.
+A ConditionId identifies the condition; an EventId identifies an occurrence/state notified. A server can keep previous branches when a past state still needs to be acknowledged. Using a single Boolean in the browser loses this distinction.
 
-## Progettare il rilevamento con isteresi
+## Designing the detection with hysteresis
 
-Questo codice è logica di dominio, **non un'implementazione del protocollo A&C**:
+This code is domain logic, **not an implementation of the A&C protocol**:
 
 ```csharp
 static bool NextActive(bool wasActive, double level,
@@ -57,30 +57,30 @@ static bool NextActive(bool wasActive, double level,
 }
 ```
 
-Con lowLimit=5 e hysteresis=0.3, una misura 4.9 attiva l'allarme; 5.1 non lo disattiva ancora; 5.3 permette il rientro. La scelta di soglie strettamente minori è esplicita: scrivi i test sui valori esattamente uguali ai confini.
+With lowLimit=5 and hysteresis=0.3, a measurement of 4.9 activates the alarm; 5.1 does not yet deactivate it; 5.3 allows the return to normal. The choice of strictly-less thresholds is explicit: write tests on the values exactly equal to the boundaries.
 
-Il livello di qualità Bad richiede una decisione separata: non far rientrare l'allarme usando zero o un valore mancante. Puoi mantenere l'ultimo stato e segnalare qualità incerta oppure esporre una condizione di sensore guasto.
+A Bad quality level requires a separate decision: do not make the alarm return to normal by using zero or a missing value. You can keep the last state and signal uncertain quality, or expose a faulty-sensor condition.
 
-## Implementazione guidata
+## Guided implementation
 
-1. Scegli un tipo standard appropriato, per esempio un limite non esclusivo per il livello.
-2. Crea l'istanza di condizione e collega SourceNode e la sorgente notificabile.
-3. Aggiorna campi di stato, qualità, severity e timestamp coerentemente.
-4. Implementa i metodi standard e i controlli su EventId/branch.
-5. Nel client seleziona ConditionId, EventId, BranchId, Retain e gli Id degli stati.
-6. Mantieni un dizionario di condizioni/branch, distinto dal log cronologico.
-7. Dopo reconnect esegui ConditionRefresh e gestisci correttamente gli eventi di inizio/fine refresh.
+1. Choose an appropriate standard type, for example a non-exclusive limit for the level.
+2. Create the condition instance and link the SourceNode and the notifying source.
+3. Update state fields, quality, severity and timestamp consistently.
+4. Implement the standard methods and the checks on EventId/branch.
+5. In the client select ConditionId, EventId, BranchId, Retain and the Ids of the states.
+6. Keep a dictionary of conditions/branches, distinct from the chronological log.
+7. After a reconnect run ConditionRefresh and handle the refresh start/end events correctly.
 
-Gli aggiornamenti durante il refresh non devono essere scambiati per nuove occorrenze tutte da aggiungere al log. La tabella corrente si riconcilia con lo stato server.
+The updates during the refresh must not be mistaken for new occurrences all to be added to the log. The current table is reconciled with the server state.
 
-## Esercizio risolto: outage e rientro
+## Solved exercise: outage and return to normal
 
-Sequenza: l'allarme si attiva, il client si scollega, il livello rientra, l'allarme non è ancora acknowledged, il client torna.
+Sequence: the alarm activates, the client disconnects, the level returns to normal, the alarm is not yet acknowledged, the client comes back.
 
-**Soluzione.** Il client deve recuperare gli stati retained dal server, non ricostruirli soltanto dalle misure correnti. Se la policy mantiene un ramo non riconosciuto, il refresh deve mostrarlo anche se ActiveState è false. Eventi persi durante l'outage e stato corrente della condizione sono due problemi distinti.
+**Solution.** The client must recover the retained states from the server, not rebuild them only from the current measurements. If the policy keeps an unacknowledged branch, the refresh must show it even if ActiveState is false. Events lost during the outage and the current state of the condition are two distinct problems.
 
-**Criteri di accettazione.** Acknowledge con EventId non valido viene rifiutato; le branch non si sovrascrivono; il refresh riconcilia l'elenco; la UI distingue allarme attivo e allarme rientrato da riconoscere.
+**Acceptance criteria.** An acknowledge with an invalid EventId is rejected; the branches do not overwrite each other; the refresh reconciles the list; the UI distinguishes an active alarm from an alarm that has returned to normal and is waiting to be acknowledged.
 
-Riferimento: [Alarms & Conditions, Part 9](https://reference.opcfoundation.org/Core/Part9/).
+Reference: [Alarms & Conditions, Part 9](https://reference.opcfoundation.org/Core/Part9/).
 
-[Indice](README.md) · [Uso dei sample](../USAGE.md) · [Architettura](../ARCHITECTURE.md)
+[Index](README.md) · [Using the samples](../USAGE.md) · [Architecture](../ARCHITECTURE.md)

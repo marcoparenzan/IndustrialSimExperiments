@@ -1,32 +1,32 @@
-# Read, Write, qualità, timestamp e batch
+# Read, Write, quality, timestamps and batches
 
-## Concetti
+## Concepts
 
-Read può richiedere più attributi di più nodi nella stessa chiamata. Ogni risultato ha il proprio StatusCode. MaxAge è una richiesta di freschezza, non un polling rate. SourceTimestamp indica il tempo attribuito al dato dalla sorgente; ServerTimestamp il tempo associato dal server alla gestione del dato. Gli attributi non-Value possono avere timestamp diversi o vuoti.
+Read can request several attributes of several nodes in the same call. Every result has its own StatusCode. MaxAge is a freshness request, not a polling rate. SourceTimestamp indicates the time attributed to the datum by the source; ServerTimestamp the time associated by the server with handling the datum. Non-Value attributes can have different or empty timestamps.
 
-## Esperimento
+## Experiment
 
-Esegui client read, write ed errors. La scrittura di Setpoint=65 usa Double; 999 produce BadOutOfRange, una stringa produce BadTypeMismatch e Temperature produce BadNotWritable.
+Run client read, write and errors. Writing Setpoint=65 uses Double; 999 produces BadOutOfRange, a string produces BadTypeMismatch and Temperature produces BadNotWritable.
 
-## Nel codice C#
+## In the C# code
 
-PlantNodeManager imposta AccessLevel e UserAccessLevel e convalida Write nel callback OnWriteValue. Lessons.Write controlla lo StatusCode del singolo risultato. La UI mostra l'esito e riceve il nuovo valore attraverso la subscription.
+PlantNodeManager sets AccessLevel and UserAccessLevel and validates Write in the OnWriteValue callback. Lessons.Write checks the StatusCode of the individual result. The UI shows the outcome and receives the new value through the subscription.
 
-## Esercizio e verifica
+## Exercise and verification
 
-Aggiungi una scrittura batch di due nodi con un valore valido e uno invalido. Verifica entrambi i risultati e il readback, senza presumere atomicità.
+Add a batch write of two nodes with one valid and one invalid value. Verify both results and the readback, without presuming atomicity.
 
-## Errore da evitare
+## Mistake to avoid
 
-Write batch non è una transazione. Non usare double.NaN come normale setpoint: il server del corso lo rifiuta esplicitamente.
+A batch Write is not a transaction. Do not use double.NaN as a normal setpoint: the course server explicitly rejects it.
 
-## Obiettivi e laboratori
+## Goals and labs
 
-Tempo indicativo: 90 minuti. Imparerai a distinguere risultato del servizio e risultati delle operazioni, validare i valori e verificare il readback. Leggi [RunRead.cs](../../src/UaCourse/Labs/RunRead.cs), [RunWrite.cs](../../src/UaCourse/Labs/RunWrite.cs) e [RunErrors.cs](../../src/UaCourse/Labs/RunErrors.cs).
+Estimated time: 90 minutes. You will learn to distinguish the service result from the operation results, validate values and verify the readback. Read [RunRead.cs](../../../src/OpcUaCourse/UaCourse/Labs/RunRead.cs), [RunWrite.cs](../../../src/OpcUaCourse/UaCourse/Labs/RunWrite.cs) and [RunErrors.cs](../../../src/OpcUaCourse/UaCourse/Labs/RunErrors.cs).
 
-## La lettura batch è una lista di operazioni
+## A batch read is a list of operations
 
-ReadValueId non indica solo un nodo: specifica AttributeId, eventuale IndexRange e DataEncoding. RunRead legge quattro attributi della stessa Variable. La lista dei risultati conserva la corrispondenza con l'ordine delle richieste.
+ReadValueId does not only indicate a node: it specifies AttributeId, an optional IndexRange and DataEncoding. RunRead reads four attributes of the same Variable. The list of results keeps the correspondence with the order of the requests.
 
 ```csharp
 var requests = new ReadValueIdCollection
@@ -42,13 +42,13 @@ for (var i = 0; i < results.Count; i++)
     Console.WriteLine($"{requests[i].NodeId}: {results[i].StatusCode}");
 ```
 
-Un errore del servizio può impedire una risposta valida; con una risposta valida può comunque fallire una delle operazioni. Mostrare solo il primo StatusCode o intercettare soltanto eccezioni perde questa granularità.
+A service error can prevent a valid response; with a valid response one of the operations can still fail. Showing only the first StatusCode or catching only exceptions loses this granularity.
 
-MaxAge=0 richiede un tentativo di ottenere un valore corrente secondo il comportamento del server; non certifica un accesso sincrono a un sensore fisico. Qui il valore è mantenuto in memoria dal simulatore. TimestampsToReturn.Both chiede entrambi i timestamp, ma gli attributi non-Value non devono essere interpretati come misure fisiche.
+MaxAge=0 requests an attempt to obtain a current value according to the behavior of the server; it does not certify synchronous access to a physical sensor. Here the value is kept in memory by the simulator. TimestampsToReturn.Both requests both timestamps, but the non-Value attributes must not be interpreted as physical measurements.
 
-## Scrittura e validazione lato server
+## Writing and server-side validation
 
-La richiesta usa Double in modo esplicito:
+The request uses Double explicitly:
 
 ```csharp
 var status = Lessons.Write(session,
@@ -57,30 +57,30 @@ if (StatusCode.IsBad(status))
     throw new ServiceResultException(status);
 ```
 
-65 e 65.0 non sono equivalenti dal punto di vista del Variant: il primo literal C# è Int32, il secondo Double. Non assumere conversioni automatiche universali del server.
+65 and 65.0 are not equivalent from the point of view of the Variant: the first C# literal is Int32, the second Double. Do not assume universal automatic conversions by the server.
 
-PlantNodeManager combina permessi del nodo e callback di validazione: rifiuta tipi errati, numeri non finiti e target fuori da 20..90. La UI ha min/max, ma questa validazione server rimane indispensabile perché esistono altri client.
+PlantNodeManager combines the permissions of the node with a validation callback: it rejects wrong types, non-finite numbers and targets outside 20..90. The UI has min/max, but this server-side validation remains indispensable because other clients exist.
 
-Il readback conferma lo stato pubblicato; non dimostra che il processo fisico abbia raggiunto 65 °C. Setpoint è il valore desiderato, Temperature è la risposta dinamica. Separare questi due indicatori è parte della semantica applicativa.
+The readback confirms the published state; it does not prove that the physical process has reached 65 °C. Setpoint is the desired value, Temperature is the dynamic response. Keeping these two indicators separate is part of the application semantics.
 
-## Esercizio risolto: scrittura parzialmente riuscita
+## Solved exercise: a partially successful write
 
-Costruisci una WriteValueCollection con Setpoint=64.0 e Temperature=50.0. Per il primo nodo attendi Good; per il secondo BadNotWritable. Dopo la chiamata leggi entrambi.
+Build a WriteValueCollection with Setpoint=64.0 and Temperature=50.0. For the first node expect Good; for the second BadNotWritable. After the call read both.
 
-**Soluzione.** Il setpoint deve risultare 64. La temperatura continua a dipendere dalla simulazione. Non effettuare rollback inventato sul server: se il dominio richiede atomicità, esponi un Method applicativo che valida l'intera operazione e definisce il comportamento di commit.
+**Solution.** The setpoint must be 64. The temperature keeps depending on the simulation. Do not perform an invented rollback on the server: if the domain requires atomicity, expose an application Method that validates the whole operation and defines the commit behavior.
 
-| Caso | Esito del sample |
+| Case | Outcome of the sample |
 |---|---|
 | Setpoint=65.0 | Good |
 | Setpoint=999.0 | BadOutOfRange |
 | Setpoint="wrong" | BadTypeMismatch |
 | Temperature=50.0 | BadNotWritable |
-| Nodo inesistente | BadNodeIdUnknown |
+| Nonexistent node | BadNodeIdUnknown |
 
-Il laboratorio errors verifica anche l'eccezione sollevata dall'helper ReadValue per un nodo inesistente. Non attribuire questo stile di gestione a tutti gli overload Read.
+The errors lab also verifies the exception raised by the ReadValue helper for a nonexistent node. Do not attribute this handling style to all Read overloads.
 
-**Autoverifica.** Un valore Bad va sempre sostituito da zero? No: zero è un valore di processo plausibile e confonderebbe assenza dati con misura reale. Conserva qualità separata e visualizza indisponibilità.
+**Self-check.** Must a Bad value always be replaced by zero? No: zero is a plausible process value and would confuse missing data with a real measurement. Keep the quality separate and display the unavailability.
 
-Riferimento: [Attribute Service Set](https://reference.opcfoundation.org/Core/Part4/v105/docs/5.11).
+Reference: [Attribute Service Set](https://reference.opcfoundation.org/Core/Part4/v105/docs/5.11).
 
-[Indice](README.md) · [Uso dei sample](../USAGE.md) · [Architettura](../ARCHITECTURE.md)
+[Index](README.md) · [Using the samples](../USAGE.md) · [Architecture](../ARCHITECTURE.md)

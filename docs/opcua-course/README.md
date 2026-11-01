@@ -1,58 +1,62 @@
-# OPC UA in C#: dal segnale al modello informativo
+# OPC UA in C#: from signal to information model
 
-Laboratorio progressivo in italiano, con server OPC UA simulato e applicazione Blazor Server (.NET 10, rendering Interactive Server). Il primo sinottico riprende l'impianto idrico della schermata fornita: lo schema è ridisegnato in SVG, senza menu, data, valori statici o cornice. Il secondo esplora un reattore, metodi e ricette.
+A progressive lab with a simulated OPC UA server and a Blazor Server application (.NET 11, Interactive Server rendering). The first synoptic is based on the water plant of the screen provided: the diagram is redrawn in SVG, without menus, dates, static values or frame. The second one explores a reactor, methods and recipes.
 
-Le label ricevono DataValue attraverso MonitoredItem e Publish. I pulsanti eseguono Write e Call; gli eventi arrivano con una subscription a BaseEventType. Il browser comunica con Blazor via SignalR: è il processo ASP.NET a parlare OPC UA.
+The labels receive DataValues through MonitoredItems and Publish. The buttons run Write and Call; events arrive through a subscription to BaseEventType. The browser talks to Blazor over SignalR: it is the ASP.NET process that speaks OPC UA.
 
-## Avvio rapido
+The course lives in the ForgeIndustrial repository (`src/OpcUaCourse`) and can also be pointed at the `ForgeSimApp` simulator, which exposes its own OPC UA server on port 4840. The course server uses port **4841** so that both can run at the same time.
 
-Prerequisito: SDK .NET 10. Dalla root del repository:
+## Quick start
 
-```powershell
-dotnet restore OpcUaExperiments.slnx
-dotnet build OpcUaExperiments.slnx --no-restore
-dotnet run --project src/UaCourse --no-build -- server
-```
-
-In un secondo terminale, **sempre dalla stessa root**:
+Prerequisite: the .NET 11 SDK. From the repository root:
 
 ```powershell
-dotnet run --project src/UaCourse.Web --no-launch-profile --urls http://localhost:5080
+dotnet restore src/ForgeIndustrial.slnx
+dotnet build src/ForgeIndustrial.slnx --no-restore
+dotnet run --project src/OpcUaCourse/UaCourse --no-build -- server
 ```
 
-Aprire http://localhost:5080. Endpoint UA: `opc.tcp://localhost:4841/UaCourse`. Arrestare con Ctrl+C. Il server e la web app sono processi separati, con due sessioni indipendenti se si avvia anche il client console.
-
-La home è un indice neutro delle dashboard, con anteprime statiche e link. Il nuovo template UA Lab usa una sidebar scura, pannelli chiari e navigazione compatta su mobile. Le dashboard hanno URL dedicati: [impianto idrico](http://localhost:5080/dashboards/water) e [reattore e ricette](http://localhost:5080/dashboards/reactor). Il catalogo genera automaticamente sia le schede della home sia i link della navigazione.
-
-## Percorso
-
-[Indice delle lezioni](docs/lessons/README.md), [uso e troubleshooting](docs/USAGE.md), [architettura](docs/ARCHITECTURE.md), [roadmap](docs/ROADMAP.md), [punti aperti](docs/OPEN-POINTS.md), [changelog](CHANGELOG.md).
-
-Il percorso distingue laboratori eseguibili e approfondimenti progettuali. Sono implementati browse e continuation point, browse path, letture batch e attributi, scrittura validata, ObjectType, strutture standard e custom, array, metodi con input strutturato, data change, eventi, canale cifrato e riconnessione Blazor. RecipeDataType pubblica DataTypeDefinition e HasEncoding: un client indipendente lo decodifica dai metadati. Generazione ModelCompiler, Alarms & Conditions, storico, PubSub, ruoli e GDS restano estensioni nella roadmap.
-
-## Verifica automatica
-
-Con nessun server attivo sulla porta 4841:
+In a second terminal, **always from the same root**:
 
 ```powershell
-dotnet run --project src/UaCourse -- verify
+dotnet run --project src/OpcUaCourse/UaCourse.Web --no-launch-profile --urls http://localhost:5080
 ```
 
-Avvia un server reale TCP, apre una sessione SignAndEncrypt ed esegue tredici laboratori con asserzioni. Un errore produce exit code 1. Nessun PLC necessario. I laboratori sono separati in `src/UaCourse/Labs`; includono array parziali, verifica del modello, precondizioni dei metodi e ricette personalizzate.
+Open http://localhost:5080. UA endpoint: `opc.tcp://localhost:4841/UaCourse`. Stop with Ctrl+C. The server and the web app are separate processes, with two independent sessions if you also start the console client.
 
-Con server attivo, prova la [lezione 09 eseguibile](docs/lessons/09-custom-types.md):
+Certificates (including private keys), the exported NodeSet2 and the ASP.NET keys are written outside the repository: to `%LOCALAPPDATA%\UaCourse`, or to the folder named by the `UACOURSE_ARTIFACTS_ROOT` environment variable. Set the same value for every process of the course.
+
+The home page is a neutral index of the dashboards, with static previews and links. The UA Lab template uses a dark sidebar, light panels and compact navigation on mobile. The dashboards have their own URLs: [water plant](http://localhost:5080/dashboards/water) and [reactor and recipes](http://localhost:5080/dashboards/reactor). The catalog generates both the home cards and the navigation links automatically.
+
+## The path
+
+[Lesson index](lessons/README.md), [usage and troubleshooting](USAGE.md), [architecture](ARCHITECTURE.md), [roadmap](ROADMAP.md), [open points](OPEN-POINTS.md), [changelog](CHANGELOG.md).
+
+The path distinguishes executable labs from design deep-dives. Implemented: browse and continuation points, browse paths, batch reads and attributes, validated writes, ObjectTypes, standard and custom structures, arrays, methods with a structured input, data changes, events, an encrypted channel and Blazor reconnection. RecipeDataType publishes DataTypeDefinition and HasEncoding: an independent client decodes it from the metadata. ModelCompiler generation, Alarms & Conditions, history, PubSub, roles and GDS remain extensions in the roadmap.
+
+## Automatic verification
+
+With no server running on port 4841:
 
 ```powershell
-dotnet run --project src/UaCourse -- client custom-types
-dotnet run --project src/UaCourse.DynamicClient
+dotnet run --project src/OpcUaCourse/UaCourse -- verify
 ```
 
-Il secondo progetto non referenzia la DLL del server né RecipeData: usa il componente ufficiale ComplexTypes per scoprire il tipo. Il server esporta il frammento NodeSet2 della ricetta in `.artifacts/models/Recipe.NodeSet2.xml`. Il pannello Blazor permette caricamento e lettura della ricetta custom.
+It starts a real TCP server, opens a SignAndEncrypt session and runs thirteen labs with assertions. A failure produces exit code 1. No PLC is needed. The labs are separate files in `src/OpcUaCourse/UaCourse/Labs`; they include partial arrays, model verification, method preconditions and custom recipes.
 
-## Estendere le schermate
+With the server running, try the [executable lesson 09](lessons/09-custom-types.md):
 
-Definire uno `ScreenDefinition` in `src/UaCourse.Web/Modules/ScreenCatalog.cs`, aggiungere uno sfondo in `wwwroot/screens`, dichiarare le label con coordinate percentuali e pubblicare i relativi nodi sul server. `Synoptic` rende tutte le schermate e `UaConnection` sottoscrive automaticamente i nodi distinti del catalogo.
+```powershell
+dotnet run --project src/OpcUaCourse/UaCourse -- client custom-types
+dotnet run --project src/OpcUaCourse/UaCourse.DynamicClient
+```
 
-## Riferimenti
+The second project references neither the server DLL nor RecipeData: it uses the official ComplexTypes component to discover the type. The server exports the NodeSet2 fragment of the recipe to `<artifacts root>/models/Recipe.NodeSet2.xml`. The Blazor panel allows loading and reading the custom recipe.
 
-SDK ufficiale [OPC Foundation UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard/tree/1.5.374.158), fissato a 1.5.374.158 per rendere riproducibili le API del laboratorio; non è una dichiarazione di versione più recente. [Part 3: Address Space](https://reference.opcfoundation.org/Core/Part3/), [Part 4: Services](https://reference.opcfoundation.org/Core/Part4/), [Part 5: Information Model](https://reference.opcfoundation.org/Core/Part5/), [sample ufficiali](https://github.com/OPCFoundation/UA-.NETStandard-Samples). Le API del ramo corrente possono differire da quelle del pacchetto fissato.
+## Extending the screens
+
+Define a `ScreenDefinition` in `src/OpcUaCourse/UaCourse.Web/Modules/ScreenCatalog.cs`, add a background in `wwwroot/screens`, declare the labels with percentage coordinates and publish the matching nodes on the server. `Synoptic` renders every screen and `UaConnection` automatically subscribes to the distinct nodes of the catalog.
+
+## References
+
+Official SDK [OPC Foundation UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard), package version 1.5.376.244 (the same one `ForgeSimApp` uses), pinned to make the lab's APIs reproducible; this is not a claim that it is the latest version. [Part 3: Address Space](https://reference.opcfoundation.org/Core/Part3/), [Part 4: Services](https://reference.opcfoundation.org/Core/Part4/), [Part 5: Information Model](https://reference.opcfoundation.org/Core/Part5/), [official samples](https://github.com/OPCFoundation/UA-.NETStandard-Samples). The APIs of the current branch may differ from those of the pinned package.

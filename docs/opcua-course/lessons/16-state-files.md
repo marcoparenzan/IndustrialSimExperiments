@@ -1,56 +1,56 @@
-# State machine, FileType e contratti di processo
+# State machines, FileType and process contracts
 
-## Concetti
+## Concepts
 
-Approfondimento progettuale. StateMachineType rende espliciti stati e transizioni; CurrentState e LastTransition sono dati navigabili. FileType espone Open/Read/Write/Close con handle, Size e permessi. Questi contratti evitano metodi inventati e blob senza semantica condivisa.
+Design deep-dive. StateMachineType makes states and transitions explicit; CurrentState and LastTransition are navigable data. FileType exposes Open/Read/Write/Close with a handle, Size and permissions. These contracts avoid invented methods and blobs without shared semantics.
 
-## Esperimento
+## Experiment
 
-Estendi il ciclo del reattore in Idle, Heating, Holding, Completed e Fault. Definisci quali comandi sono legali e quali transizioni generano eventi. La versione corrente usa un Boolean Running.
+Extend the reactor cycle into Idle, Heating, Holding, Completed and Fault. Define which commands are legal and which transitions generate events. The current version uses a Running Boolean.
 
-## Nel codice C#
+## In the C# code
 
-Per il file di ricetta usa un oggetto FileType e limiti server di dimensione e numero handle. Separare caricamento, validazione del contenuto e attivazione della ricetta. Il parser deve rifiutare una ricetta incompleta prima di attivarla.
+For the recipe file use a FileType object and server limits on size and number of handles. Separate loading, validation of the content and activation of the recipe. The parser must reject an incomplete recipe before activating it.
 
-## Esercizio e verifica
+## Exercise and verification
 
-Progetta download a chunk e cleanup degli handle quando la sessione termina. Scrivi una tabella di transizioni con precondizioni e output; genera un evento per ogni transizione.
+Design a chunked download and the cleanup of the handles when the session ends. Write a transition table with preconditions and outputs; generate an event for every transition.
 
-## Errore da evitare
+## Mistake to avoid
 
-Un file trasferito correttamente non è necessariamente una ricetta valida. Non confondere trasferimento e commit della configurazione di processo.
+A file transferred correctly is not necessarily a valid recipe. Do not confuse the transfer with the commit of the process configuration.
 
-## Obiettivi e scenario integrato
+## Goals and integrated scenario
 
-Tempo indicativo: 2–3 ore. State machine e FileType sono estensioni da implementare; il server corrente usa Running e non pubblica un oggetto file. Lo scenario è: trasferire una ricetta, validarla, renderla attiva e avviare un ciclo a stati.
+Estimated time: 2–3 hours. State machine and FileType are extensions to be implemented; the current server uses Running and does not publish a file object. The scenario is: transfer a recipe, validate it, make it active and start a cycle of states.
 
-## Definire gli stati prima dei pulsanti
+## Define the states before the buttons
 
-| Stato | Start | Stop | Evento o condizione di uscita |
+| State | Start | Stop | Event or exit condition |
 |---|---|---|---|
-| Idle | Accetta ricetta valida | Nessun effetto o esito documentato | Avvio → Heating |
-| Heating | Rifiuta | Ritorna Idle | Target raggiunto → Holding |
-| Holding | Rifiuta | Ritorna Idle | Tempo mantenimento → Completed |
-| Completed | Nuovo ciclo secondo policy | Ritorna Idle | Reset o nuovo avvio |
-| Fault | Rifiuta | Policy di arresto sicuro | Reset autorizzato dopo rimozione causa |
+| Idle | Accepts a valid recipe | No effect, or a documented outcome | Start → Heating |
+| Heating | Rejects | Returns to Idle | Target reached → Holding |
+| Holding | Rejects | Returns to Idle | Hold time → Completed |
+| Completed | New cycle according to policy | Returns to Idle | Reset or new start |
+| Fault | Rejects | Safe-stop policy | Authorized reset after removing the cause |
 
-La tabella è un contratto applicativo proposto. Deve essere mappata a uno StateMachineType/FiniteStateMachineType appropriato con stati, transizioni e identificatori. CurrentState leggibile e il suo Id non sono sostituibili con una stringa libera che cambia in base alla lingua.
+The table is a proposed application contract. It must be mapped to an appropriate StateMachineType/FiniteStateMachineType with states, transitions and identifiers. The readable CurrentState and its Id cannot be replaced by a free string that changes with the language.
 
-Per il processo del laboratorio, evitare transizioni dovute a una sola lettura rumorosa: definisci tolleranza, qualità richiesta ed eventuale tempo di stabilità.
+For the process of the lab, avoid transitions caused by a single noisy reading: define a tolerance, the quality required and possibly a stability time.
 
-## Separare modello di processo e NodeManager
+## Separate the process model from the NodeManager
 
-Un motore di stato di dominio può esporre stato corrente e una funzione di transizione; il NodeManager traduce gli effetti in aggiornamenti di nodi ed eventi. Non spargere if su Running in ogni callback.
+A domain state engine can expose the current state and a transition function; the NodeManager translates the effects into node updates and events. Do not scatter ifs on Running in every callback.
 
-**Soluzione dell'esercizio di progetto.** Centralizza le transizioni, valida comando e stato, aggiorna lo stato come operazione coerente e notifica il cambiamento. Il test del dominio verifica la tabella; il test UA verifica che CurrentState, output di Call ed evento rappresentino la stessa transizione.
+**Solution of the design exercise.** Centralize the transitions, validate command and state, update the state as a coherent operation and notify the change. The domain test verifies the table; the UA test verifies that CurrentState, the output of Call and the event represent the same transition.
 
-Per un errore non limitarti a lanciare un'eccezione dal timer: il processo deve entrare in uno stato osservabile e, se appropriato, attivare una condizione.
+For an error do not limit yourself to throwing an exception from the timer: the process must enter an observable state and, where appropriate, activate a condition.
 
-## FileType: protocollo di trasferimento
+## FileType: transfer protocol
 
-FileType espone metodi standard basati su un file handle. Open richiede una modalità, Read usa handle e lunghezza, Close rilascia la risorsa. Il nodo espone informazioni come Size e capacità di scrittura.
+FileType exposes standard methods based on a file handle. Open requires a mode, Read uses the handle and a length, Close releases the resource. The node exposes information such as Size and write capability.
 
-Flusso client da adattare a un futuro fileNode e ai MethodId risolti tramite browse; questi nodi non sono presenti oggi:
+Client flow to adapt to a future fileNode and to MethodIds resolved through browse; these nodes are not present today:
 
 ```csharp
 uint handle = (uint)session.Call(fileNode, openMethod, (byte)1)[0];
@@ -58,7 +58,7 @@ try
 {
     byte[] chunk = (byte[])session.Call(
         fileNode, readMethod, handle, 4096)[0];
-    // Accumula chunk e continua fino alla fine, rispettando limiti e stato.
+    // Accumulate the chunk and continue until the end, respecting limits and state.
 }
 finally
 {
@@ -66,20 +66,20 @@ finally
 }
 ```
 
-Il literal byte della modalità e UInt32 dell'handle devono rispettare la firma. Il blocco finally è essenziale, ma un Close remoto può fallire: il server deve avere una politica di cleanup degli handle quando scade la sessione.
+The byte literal of the mode and the UInt32 of the handle must respect the signature. The finally block is essential, but a remote Close can fail: the server must have a handle cleanup policy when the session expires.
 
-## Trasferimento non significa attivazione
+## Transfer does not mean activation
 
-Per caricare una ricetta usa staging: trasferisci il contenuto, chiudi il file, valida schema, valori e versione, poi richiama un comando di attivazione. Non modificare il target appena arrivano i primi byte.
+To load a recipe use staging: transfer the content, close the file, validate schema, values and version, then call an activation command. Do not change the target as soon as the first bytes arrive.
 
-Definisci dimensione massima, checksum se richiesto, permessi e limiti degli handle. Un nome file fornito dal client non deve diventare un percorso arbitrario del filesystem host.
+Define the maximum size, a checksum if required, permissions and handle limits. A file name supplied by the client must not become an arbitrary path of the host filesystem.
 
-## Esercizio risolto: upload interrotto
+## Solved exercise: interrupted upload
 
-Il client cade dopo metà file. La ricetta corrente deve rimanere attiva e intatta; il contenuto parziale resta nello staging o viene eliminato secondo policy.
+The client drops after half of the file. The current recipe must stay active and intact; the partial content remains in staging or is deleted according to policy.
 
-**Verifica.** Il checksum della ricetta attiva non cambia; nessuna transizione parte dal file incompleto; l'handle non resta aperto indefinitamente; un retry può creare un nuovo staging senza corrompere quello già validato.
+**Verification.** The checksum of the active recipe does not change; no transition starts from the incomplete file; the handle does not stay open indefinitely; a retry can create a new staging without corrupting the one already validated.
 
-Riferimenti: [Information Model, Part 5](https://reference.opcfoundation.org/Core/Part5/), [File Transfer, Part 20](https://reference.opcfoundation.org/Core/Part20/).
+References: [Information Model, Part 5](https://reference.opcfoundation.org/Core/Part5/), [File Transfer, Part 20](https://reference.opcfoundation.org/Core/Part20/).
 
-[Indice](README.md) · [Uso dei sample](../USAGE.md) · [Architettura](../ARCHITECTURE.md)
+[Index](README.md) · [Using the samples](../USAGE.md) · [Architecture](../ARCHITECTURE.md)

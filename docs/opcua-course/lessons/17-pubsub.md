@@ -1,89 +1,89 @@
-# PubSub, DataSet e trasporti
+# PubSub, DataSets and transports
 
-## Concetti
+## Concepts
 
-Approfondimento progettuale. Le subscription client/server usano Session, MonitoredItem e Publish. OPC UA PubSub usa Publisher, DataSetWriter, WriterGroup e Subscriber con messaggi e metadata. UDP/UADP e MQTT/JSON sono possibili combinazioni di trasporto e codifica: non sono un cambio di flag della Session.
+Design deep-dive. Client/server subscriptions use Session, MonitoredItem and Publish. OPC UA PubSub uses Publisher, DataSetWriter, WriterGroup and Subscriber with messages and metadata. UDP/UADP and MQTT/JSON are possible combinations of transport and encoding: they are not a flag change of the Session.
 
-## Esperimento
+## Experiment
 
-Crea un laboratorio separato con broker MQTT esplicito e pubblica temperature e livelli. Il server attuale non pubblica DataSetMessage e Blazor usa client/server.
+Create a separate lab with an explicit MQTT broker and publish temperatures and levels. The current server does not publish DataSetMessages and Blazor uses client/server.
 
-## Nel codice C#
+## In the C# code
 
-Definisci PublishedDataSet e DataSetMetaData, versioni, identificatori publisher/writer e mapping dei campi. Gestisci security e credenziali broker separatamente dal canale UA TCP.
+Define PublishedDataSet and DataSetMetaData, versions, publisher/writer identifiers and the mapping of the fields. Handle security and broker credentials separately from the UA TCP channel.
 
-## Esercizio e verifica
+## Exercise and verification
 
-Confronta fan-out con dieci consumer, ritardo end-to-end, perdita messaggi e aggiornamento metadata. Prova un subscriber senza modello C# condiviso.
+Compare fan-out with ten consumers, end-to-end delay, message loss and metadata update. Try a subscriber without a shared C# model.
 
-## Errore da evitare
+## Mistake to avoid
 
-Un messaggio MQTT JSON con valori non diventa automaticamente OPC UA PubSub. Verifica il formato e metadata previsti dallo standard.
+An MQTT JSON message with values does not automatically become OPC UA PubSub. Verify the format and metadata required by the standard.
 
-## Obiettivi e infrastruttura richiesta
+## Goals and required infrastructure
 
-Tempo indicativo: 2–3 ore. Serve un laboratorio separato dal client/server attuale. Per MQTT è necessario un broker esplicito; per UDP occorre una rete in cui il traffico configurato sia consentito. Il sample non genera ancora NetworkMessage PubSub.
+Estimated time: 2–3 hours. A lab separate from the current client/server is needed. For MQTT an explicit broker is necessary; for UDP you need a network where the configured traffic is allowed. The sample does not yet generate PubSub NetworkMessages.
 
-L'obiettivo è capire configurazione del DataSet, identità del publisher, metadata e comportamento del consumer, non chiamare una generica funzione Publish con una stringa JSON.
+The goal is to understand the configuration of the DataSet, the identity of the publisher, the metadata and the behavior of the consumer, not to call a generic Publish function with a JSON string.
 
-## Confronto tra modelli di comunicazione
+## Comparison of communication models
 
-| Aspetto | Client/server del corso | PubSub |
+| Aspect | Client/server of the course | PubSub |
 |---|---|---|
-| Risorsa di osservazione | MonitoredItem nella Session | DataSet pubblicato e reader |
-| Scoperta del dato | Browse e attributi del nodo | Metadata/configurazione e relativo modello |
-| Invio | Publish del servizio UA | NetworkMessage sul trasporto scelto |
-| Comandi Read/Write/Call | Servizi disponibili | Non impliciti nel flusso DataSet |
-| Consumer multipli | Sessioni/subscription | Fan-out secondo rete o broker |
+| Observation resource | MonitoredItem in the Session | Published DataSet and reader |
+| Discovery of the data | Browse and attributes of the node | Metadata/configuration and the related model |
+| Sending | Publish of the UA service | NetworkMessage on the chosen transport |
+| Read/Write/Call commands | Services available | Not implicit in the DataSet flow |
+| Multiple consumers | Sessions/subscriptions | Fan-out according to network or broker |
 
-PubSub può convivere con un server client/server sullo stesso dispositivo. Usare PubSub per telemetria non significa rinunciare a un address space per configurazione e comandi.
+PubSub can coexist with a client/server server on the same device. Using PubSub for telemetry does not mean giving up an address space for configuration and commands.
 
-## Oggetti di configurazione
+## Configuration objects
 
-PublishedDataSet definisce quali campi pubblicare. DataSetWriter produce messaggi del dataset; WriterGroup coordina invio e impostazioni di trasporto; un reader identifica ciò che deve consumare. Identificatori come PublisherId e DataSetWriterId devono essere coerenti tra i partecipanti.
+PublishedDataSet defines which fields to publish. DataSetWriter produces the messages of the dataset; WriterGroup coordinates sending and transport settings; a reader identifies what must be consumed. Identifiers such as PublisherId and DataSetWriterId must be consistent among the participants.
 
-DataSetMetaData descrive i campi e i loro tipi. Versione dei metadata e ordine dei campi sono parte del contratto: il consumer non deve attribuire il nome Pressure al campo che prima rappresentava Temperature soltanto perché occupa lo stesso indice.
+DataSetMetaData describes the fields and their types. The version of the metadata and the order of the fields are part of the contract: the consumer must not attribute the name Pressure to the field that previously represented Temperature just because it occupies the same index.
 
-UDP/UADP e MQTT/JSON sono combinazioni frequenti; scegli quelle supportate dal tuo SDK e profilo. QoS MQTT è una proprietà del trasporto, non prova che il processo sorgente abbia prodotto o conservato ogni campione.
+UDP/UADP and MQTT/JSON are frequent combinations; choose those supported by your SDK and profile. MQTT QoS is a property of the transport, not proof that the source process produced or kept every sample.
 
-## Laboratorio guidato
+## Guided lab
 
-1. Definisci un DataSet con Temperature, Setpoint e Running.
-2. Fissa gli identificatori publisher e writer, un intervallo e il mapping dei campi.
-3. Configura metadata e trasporto del publisher.
-4. Configura un subscriber distinto senza riferimenti alle classi del simulatore.
-5. Confronta il valore ricevuto con una Read client/server contemporanea.
-6. Introduci una modifica compatibile/incompatibile del modello e osserva il controllo versione.
-7. Arresta il consumer e riparti: documenta cosa viene recuperato dal broker e cosa resta perso.
+1. Define a DataSet with Temperature, Setpoint and Running.
+2. Fix the publisher and writer identifiers, an interval and the mapping of the fields.
+3. Configure metadata and transport of the publisher.
+4. Configure a distinct subscriber with no references to the classes of the simulator.
+5. Compare the value received with a simultaneous client/server Read.
+6. Introduce a compatible/incompatible change of the model and observe the version check.
+7. Stop the consumer and restart: document what is recovered from the broker and what remains lost.
 
-Usa la libreria PubSub e i sample della release scelta dello [SDK ufficiale](https://github.com/OPCFoundation/UA-.NETStandard). Non incorporare nel progetto attuale API del ramo master senza verificare compatibilità e dipendenze.
+Use the PubSub library and the samples of the chosen release of the [official SDK](https://github.com/OPCFoundation/UA-.NETStandard). Do not embed APIs of the master branch in the current project without verifying compatibility and dependencies.
 
-## Esercizio risolto: metadata sconosciuti
+## Solved exercise: unknown metadata
 
-Il subscriber riceve un messaggio con versione dei metadata che non conosce. Deve interpretarlo comunque con la tabella precedente?
+The subscriber receives a message with a metadata version it does not know. Must it interpret it anyway with the previous table?
 
-**Soluzione.** No: conserva o scarta secondo una policy esplicita, segnala mismatch e recupera il contratto necessario attraverso il meccanismo previsto dal deployment. Il numero di campi uguale non prova che tipi, nomi e significato siano invariati.
+**Solution.** No: keep or discard according to an explicit policy, report the mismatch and recover the necessary contract through the mechanism foreseen by the deployment. An equal number of fields does not prove that types, names and meaning are unchanged.
 
-Puoi rendere esplicito il controllo nel tuo adapter di dominio:
+You can make the check explicit in your domain adapter:
 
 ```csharp
 static void RequireVersion(uint expectedMajor, uint receivedMajor)
 {
     if (receivedMajor != expectedMajor)
-        throw new InvalidOperationException("Metadata incompatibili");
+        throw new InvalidOperationException("Incompatible metadata");
 }
 ```
 
-Questo frammento illustra una policy applicativa; non implementa la codifica dei metadata OPC UA né la loro intera semantica di versione.
+This snippet illustrates an application policy; it does not implement the encoding of the OPC UA metadata nor their whole version semantics.
 
-## Sicurezza e verifica
+## Security and verification
 
-Credenziali broker, TLS e security dei messaggi PubSub vanno progettate con il profilo scelto. Un certificato trusted dal server UA TCP non configura automaticamente un broker MQTT.
+Broker credentials, TLS and the security of the PubSub messages must be designed with the chosen profile. A certificate trusted by the UA TCP server does not automatically configure an MQTT broker.
 
-Misura latenza con timestamp sorgente, numero messaggi, sequenze e buchi dove disponibili. Verifica key frame/delta frame se abilitati e comportamento di un subscriber che si unisce in ritardo.
+Measure latency with the source timestamp, the number of messages, sequences and gaps where available. Verify key frame/delta frame if enabled and the behavior of a subscriber that joins late.
 
-**Criterio di completamento.** Due consumer indipendenti interpretano gli stessi campi, rifiutano un contratto incompatibile e dichiarano ciò che il sistema non recupera dopo un'interruzione.
+**Completion criterion.** Two independent consumers interpret the same fields, reject an incompatible contract and declare what the system does not recover after an interruption.
 
-Riferimento: [PubSub, Part 14](https://reference.opcfoundation.org/Core/Part14/).
+Reference: [PubSub, Part 14](https://reference.opcfoundation.org/Core/Part14/).
 
-[Indice](README.md) · [Uso dei sample](../USAGE.md) · [Architettura](../ARCHITECTURE.md)
+[Index](README.md) · [Using the samples](../USAGE.md) · [Architecture](../ARCHITECTURE.md)

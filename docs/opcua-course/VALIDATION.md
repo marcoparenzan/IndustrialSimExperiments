@@ -1,51 +1,65 @@
-# Verifiche della versione 0.1.0
+# Verification log
 
-## Home e template 0.4.0 — 2026-10-05
+## Integration into ForgeIndustrial — 2026-11-01
 
-Build web passata senza warning/errori. Chromium verifica home, impianto idrico e reattore a 1440, 1024, 768 e 390 px: dodici combinazioni senza overflow della pagina, sovrapposizioni delle label o errori JavaScript. Verificati schede della home, navigazione, reload delle rotte dedicate e identificativo sconosciuto. I valori risultano Good; Start/Stop, Write, ApplyRecipe, letture strutturate e LoadRecipe passano, inclusi rifiuto del nome vuoto e conservazione della ricetta precedente. Screenshot in `.artifacts/layout/after-*-home.png`, `after-*-water.png` e `after-*-reactor.png`.
+Run on Windows, .NET SDK 11.0.100 (release candidate), OPC UA SDK 1.5.376.244, all outputs outside the repository.
 
-## Ricetta custom 0.3.0 — 2026-10-05
-
-`verify` con server TCP reale passa tredici laboratori. custom-types verifica StructureDefinition, HasEncoding, input/output di LoadRecipe, readback, subscription del valore composto e BadOutOfRange senza modifiche per uno step NaN. Il client dinamico separato ha decodificato Name/Revision/Target/Steps dai metadati senza la DLL del server. Build dei tre progetti senza warning/errori. Chromium ha verificato caricamento/lettura custom e rifiuto del nome vuoto, oltre ai controlli layout sulle otto combinazioni già previste.
-
-## Aggiornamento didattico 0.2.0 — 2026-10-05
-
-Build del client aggiornata senza warning/errori e `client all` eseguito su server UA TCP: dodici laboratori passati, inclusi i nuovi `ranges`, `model` e `method-errors`. Verificati range inclusivo e range senza dati, TypeDefinition/Mandatory, BadInvalidState e conservazione dello stato dopo una chiamata rifiutata. Le funzionalità avanzate descritte come progetti non sono incluse nel risultato del test.
-
-Eseguite il 2026-10-05 su Windows, SDK .NET 10.0.103.
-
-| Controllo | Risultato |
+| Check | Result |
 |---|---|
-| Build della soluzione | Passata, zero warning e zero errori |
-| `UaCourse verify` con server TCP reale | Passata, exit code 0 |
-| Browse / BrowseNext / browse path | Componenti ricevuti e percorso risolto |
-| Read / Write / readback | Attributi validi e setpoint aggiornato |
-| Strutture e array | Range Low/High e Profile Double[] decodificati |
-| Call | Stop, ApplyRecipe e Start con output validi |
-| Errori attesi | BadOutOfRange, BadTypeMismatch, BadNotWritable, BadNodeIdUnknown |
-| Data change ed eventi | Notifiche ricevute attraverso Publish |
-| HTTP pagina Blazor | 200, stato connesso, 20 label Good e 2 hotspot |
-| Asset statici | water.svg, reactor.svg e course.css rispondono 200 |
-| Arresto server | 20 label non valide e zero label Good |
-| Ripartenza server | Nuova connessione, 20 label Good ed eventi ricevuti |
+| Whole-solution build (`src/ForgeIndustrial.slnx`) | 0 errors; the course projects add one warning (CS0618: `CheckApplicationInstanceCertificate` is obsolete in the new SDK) |
+| `UaCourse verify` against a real TCP server on port 4841 | Exit code 0; thirteen labs, 38 assertions OK |
+| `client custom-types` and `UaCourse.DynamicClient` | Exit code 0; the recipe is decoded without the server assembly |
+| Web app on port 5080, `/`, `/dashboards/water`, `/dashboards/reactor` | HTTP 200 |
+| Headless Chromium screenshots of the three pages | Opened and inspected: English texts, connection chip "OPC UA · SignAndEncrypt · subscription 250 ms", live values on both synoptics |
 
-## Verifica template e layout — 2026-10-05
+Not verified in this run: clicking the commands in the browser, the automated layout runner (`check-layout.cjs`, which needs the Playwright npm package), mobile widths, and the page for an unknown dashboard identifier.
 
-Il controllo HTTP iniziale verificava il prerender. Chromium ha successivamente rilevato HTTP 500 per gli script Blazor avviando con `--no-launch-profile`: corretto il caricamento degli static web assets dal manifest.
+## Home and template 0.4.0 — 2026-10-05
 
-- Entrambi i sinottici verificati a 1440, 1024, 768 e 390 pixel.
-- Nessuna collisione tra label, nessun overflow orizzontale della pagina, sfondi caricati e zero errori JavaScript.
-- Canvas minimo di 1000 px: sui piccoli schermi scorre solo il sinottico, con pannelli comandi ed eventi adattivi.
-- Verificati cambio schermata, lettura strutturata, Start/Stop dagli hotspot, Write e ApplyRecipe.
-- Migliorati focus da tastiera, selezione del sinottico e accessibilità dello scorrimento.
-- Pulsanti abilitati dopo il primo rendering interattivo, messaggi del template in italiano e demo inutilizzate rimosse.
+Web build passed without warnings or errors. Chromium verifies home, water plant and reactor at 1440, 1024, 768 and 390 px: twelve combinations with no page overflow, label overlaps or JavaScript errors. Verified: home cards, navigation, reload of the dedicated routes and an unknown identifier. The values are Good; Start/Stop, Write, ApplyRecipe, structured reads and LoadRecipe pass, including the rejection of an empty name and the preservation of the previous recipe. Screenshots in `.artifacts/layout/after-*-home.png`, `after-*-water.png` and `after-*-reactor.png` (in the original repository; now `<artifacts root>/layout`).
 
-Runner: `scripts/check-layout.cjs`. Richiede Playwright e il relativo Chromium installati. Con Playwright risolvibile da Node:
+## Custom recipe 0.3.0 — 2026-10-05
+
+`verify` against a real TCP server passes thirteen labs. custom-types verifies StructureDefinition, HasEncoding, the input/output of LoadRecipe, readback, the subscription of the composite value and BadOutOfRange with no changes for a NaN step. The separate dynamic client decoded Name/Revision/Target/Steps from the metadata without the server DLL. Build of the three projects without warnings or errors. Chromium verified custom loading/reading and the rejection of an empty name, in addition to the layout checks on the eight combinations already planned.
+
+## Teaching update 0.2.0 — 2026-10-05
+
+Client build updated without warnings or errors and `client all` run against a UA TCP server: twelve labs passed, including the new `ranges`, `model` and `method-errors`. Verified: inclusive range and range without data, TypeDefinition/Mandatory, BadInvalidState and preservation of state after a rejected call. The advanced features described as projects are not included in the test result.
+
+Run on 2026-10-05 on Windows, .NET SDK 10.0.103.
+
+| Check | Result |
+|---|---|
+| Solution build | Passed, zero warnings and zero errors |
+| `UaCourse verify` with a real TCP server | Passed, exit code 0 |
+| Browse / BrowseNext / browse path | Components received and path resolved |
+| Read / Write / readback | Valid attributes and setpoint updated |
+| Structures and arrays | Range Low/High and Profile Double[] decoded |
+| Call | Stop, ApplyRecipe and Start with valid outputs |
+| Expected errors | BadOutOfRange, BadTypeMismatch, BadNotWritable, BadNodeIdUnknown |
+| Data change and events | Notifications received through Publish |
+| HTTP Blazor page | 200, connected state, 20 Good labels and 2 hotspots |
+| Static assets | water.svg, reactor.svg and course.css respond 200 |
+| Server shutdown | 20 invalid labels and zero Good labels |
+| Server restart | New connection, 20 Good labels and events received |
+
+## Template and layout verification — 2026-10-05
+
+The initial HTTP check verified the prerender. Chromium subsequently detected HTTP 500 for the Blazor scripts when starting with `--no-launch-profile`: fixed the loading of the static web assets from the manifest.
+
+- Both synoptics verified at 1440, 1024, 768 and 390 pixels.
+- No collisions between labels, no horizontal page overflow, backgrounds loaded and zero JavaScript errors.
+- Minimum canvas of 1000 px: on small screens only the synoptic scrolls, with adaptive command and event panels.
+- Verified: screen change, structured read, Start/Stop from the hotspots, Write and ApplyRecipe.
+- Improved keyboard focus, synoptic selection and scrolling accessibility.
+- Buttons enabled after the first interactive render, template messages in Italian (the course has since been translated to English) and unused demos removed.
+
+Runner: `src/OpcUaCourse/scripts/check-layout.cjs`. It requires Playwright and its Chromium to be installed. With Playwright resolvable from Node:
 
 ```powershell
-node scripts/check-layout.cjs playwright http://localhost:5080 after
+node src/OpcUaCourse/scripts/check-layout.cjs playwright http://localhost:5080 after
 ```
 
-Screenshot delle otto combinazioni: `.artifacts/layout/after-*.png`. Gli screenshot desktop e mobile sono stati anche ispezionati visivamente. Altri browser, zoom di sistema e lifecycle SignalR in condizioni di guasto non sono coperti da questo controllo.
+Screenshots of the eight combinations are written to `<artifacts root>/layout/after-*.png`. The desktop and mobile screenshots were also inspected visually. Other browsers, system zoom and the SignalR lifecycle under fault conditions are not covered by this check.
 
-Non verificati: interoperabilità con client di terzi, carico elevato, perdita pacchetti, overflow, host remoti e autorizzazioni. Le estensioni advanced della roadmap non sono incluse nei risultati.
+Not verified: interoperability with third-party clients, high load, packet loss, overflow, remote hosts and authorizations. The advanced extensions of the roadmap are not included in the results.

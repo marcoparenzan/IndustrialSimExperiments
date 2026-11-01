@@ -1,32 +1,32 @@
 # Roadmap
 
-## Disponibile nella prima versione
+## Available in the first version
 
-- Server e client console, sinottici modulari idrico/reattore, subscription, Write e Call.
-- Address space, ObjectType, attributi, namespace URI, array e struttura standard UA.
-- Eventi semplici, canale cifrato, errori di servizio, riconnessione con ricreazione della sessione.
-- Percorso didattico con laboratori automatici e progetti di approfondimento.
-- Home neutra e dashboard con URL dedicati; template UA Lab responsive con navigazione generata dal catalogo.
+- Server and console client, modular water-plant/reactor synoptics, subscriptions, Write and Call.
+- Address space, ObjectTypes, attributes, namespace URIs, arrays and the standard UA structure.
+- Simple events, encrypted channel, service errors, reconnection by recreating the session.
+- Teaching path with automatic labs and deep-dive projects.
+- Neutral home page and dashboards with dedicated URLs; responsive UA Lab template with navigation generated from the catalog.
 
-## Evoluzione del modello
+## Evolution of the model
 
-1. Estrarre protocollo e contratti in libreria; separare simulazione fisica e mapping NodeManager.
-2. Completare ReactorType e creare PumpType con oggetti e metodi individuali. Criterio: due istanze con gli stessi BrowseName relativi e comportamento indipendente.
-3. RecipeDataType con StructureDefinition, encoding, array di step, metodo e decoding indipendente è disponibile. Estenderlo con enum/campi opzionali e generazione ModelCompiler riproducibile; il NodeSet2 corrente è un export parziale runtime.
-4. Estendere i comandi dichiarativi già disponibili ai metodi delle singole pompe, con argomenti e feedback per hotspot. Criterio: nessuna logica UA nel componente grafico e binding validato all'avvio.
+1. Extract protocol and contracts into a library; separate the physical simulation from the NodeManager mapping.
+2. Complete ReactorType and create PumpType with individual objects and methods. Criterion: two instances with the same relative BrowseNames and independent behavior.
+3. RecipeDataType with StructureDefinition, encoding, an array of steps, a method and independent decoding is available. Extend it with enums/optional fields and a reproducible ModelCompiler generation; the current NodeSet2 is a partial runtime export.
+4. Extend the declarative commands already available to the methods of the individual pumps, with arguments and feedback per hotspot. Criterion: no UA logic in the graphic component and bindings validated at startup.
 
-## Servizi avanzati
+## Advanced services
 
-5. AlarmConditionType con Active/Acked/Confirmed, ConditionRefresh e retained branches. Criterio: recupero degli allarmi attivi dopo reconnect.
-6. Storico con HistoryRead raw, continuation point e archivio persistente. Criterio: paginazione e campioni ordinati con qualità e timestamp.
-7. FileType per trasferire ricette, StateMachineType per il ciclo e modellazione con companion specification appropriata.
-8. PubSub MQTT/JSON e UDP/UADP, usando un laboratorio separato e un broker esplicito. Criterio: correlazione dei campi e metadata del DataSet.
+5. AlarmConditionType with Active/Acked/Confirmed, ConditionRefresh and retained branches. Criterion: recovery of the active alarms after a reconnect.
+6. History with raw HistoryRead, continuation points and a persistent archive. Criterion: pagination and ordered samples with quality and timestamp.
+7. FileType to transfer recipes, StateMachineType for the cycle, and modeling with an appropriate companion specification.
+8. PubSub MQTT/JSON and UDP/UADP, using a separate lab and an explicit broker. Criterion: correlation of the fields and the DataSet metadata.
 
-## Robustezza e gestione
+## Robustness and management
 
-9. Identità utente, ruoli e audit; HTTPS/autenticazione web; policy per ogni comando.
-10. Reconnect con backoff e jitter, eventuale reactivation/transfer delle subscription, loss counters e diagnostica.
-11. Configurazione endpoint/PKI esterna, trust amministrativo, rinnovo certificati e laboratorio GDS.
-12. Test browser automatizzati, server restart, overflow delle code, carico e interoperabilità con client di terzi.
+9. User identity, roles and audit; web HTTPS/authentication; a policy for every command.
+10. Reconnect with backoff and jitter, optional reactivation/transfer of the subscriptions, loss counters and diagnostics.
+11. External endpoint/PKI configuration, administrative trust, certificate renewal and a GDS lab.
+12. Automated browser tests, server restart, queue overflow, load and interoperability with third-party clients.
 
-Il corso può essere esteso per moduli: gli approfondimenti oggi descrivono contratti, esperimenti e criteri di completamento, ma non promettono un supporto già implementato da questo server.
+The course can be extended by modules: today the deep-dives describe contracts, experiments and completion criteria, but they do not promise support that this server already implements.

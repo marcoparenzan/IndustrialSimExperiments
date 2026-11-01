@@ -1,73 +1,73 @@
-# Tipi personalizzati: RecipeDataType, encoding e client dinamico
+# Custom types: RecipeDataType, encoding and a dynamic client
 
-Questa lezione implementa un tipo UA personalizzato, una Variable strutturata, un Method che riceve la struttura e una subscription sul valore composto. Include due client: uno conosce la classe C#; l'altro costruisce il tipo dai metadati del server, senza dipendere dalla DLL del simulatore.
+This lesson implements a custom UA type, a structured Variable, a Method that receives the structure and a subscription on the composite value. It includes two clients: one knows the C# class; the other builds the type from the metadata of the server, without depending on the simulator's DLL.
 
-## Obiettivi, prerequisiti e codice
+## Goals, prerequisites and code
 
-Tempo indicativo: 2–3 ore. Servono le lezioni 03, 06 e 08. Alla fine devi saper distinguere DataTypeId ed encoding id, mantenere coerenti definizione e codifica e verificare che una ricetta rifiutata non modifichi lo stato.
+Estimated time: 2–3 hours. Lessons 03, 06 and 08 are needed. At the end you must be able to tell a DataTypeId from an encoding id, keep definition and encoding consistent, and verify that a rejected recipe does not change the state.
 
-| Artefatto | Responsabilità |
+| Artifact | Responsibility |
 |---|---|
-| [RecipeData.cs](../../src/UaCourse/Models/RecipeData.cs) | Classe encodeable, campi, Clone e validazione |
-| [RecipeNodeModel.cs](../../src/UaCourse/Models/RecipeNodeModel.cs) | DataType, StructureDefinition, encoding e LoadRecipe |
-| [RunCustomTypes.cs](../../src/UaCourse/Labs/RunCustomTypes.cs) | Asserzioni client, Read, Call e Publish |
-| [DynamicClient](../../src/UaCourse.DynamicClient/Program.cs) | Decodifica da metadati senza RecipeData |
-| [UaConnection](../../src/UaCourse.Web/Services/UaConnection.cs) | Comandi e letture del pannello Blazor |
+| [RecipeData.cs](../../../src/OpcUaCourse/UaCourse/Models/RecipeData.cs) | Encodeable class, fields, Clone and validation |
+| [RecipeNodeModel.cs](../../../src/OpcUaCourse/UaCourse/Models/RecipeNodeModel.cs) | DataType, StructureDefinition, encoding and LoadRecipe |
+| [RunCustomTypes.cs](../../../src/OpcUaCourse/UaCourse/Labs/RunCustomTypes.cs) | Client assertions, Read, Call and Publish |
+| [DynamicClient](../../../src/OpcUaCourse/UaCourse.DynamicClient/Program.cs) | Decoding from metadata without RecipeData |
+| [UaConnection](../../../src/OpcUaCourse/UaCourse.Web/Services/UaConnection.cs) | Commands and reads of the Blazor panel |
 
-Il codice encodeable è scritto manualmente per rendere visibile il contratto. La generazione con ModelCompiler resta un'evoluzione, non un passaggio necessario per avviare questo laboratorio.
+The encodeable code is written by hand to make the contract visible. Generation with ModelCompiler remains an evolution, not a step needed to start this lab.
 
-## Preparazione ed esecuzione
+## Preparation and execution
 
-Dalla root, aggiorna le dipendenze e compila. Ferma i processi che usano gli stessi output di build prima di ricompilare su Windows.
-
-```powershell
-dotnet restore OpcUaExperiments.slnx
-dotnet build OpcUaExperiments.slnx --no-restore
-dotnet run --project src/UaCourse --no-build -- server
-```
-
-In un secondo terminale:
+From the repository root, restore the dependencies and build. Stop the processes that use the same build outputs before rebuilding on Windows.
 
 ```powershell
-dotnet run --project src/UaCourse --no-build -- client custom-types
-dotnet run --project src/UaCourse.DynamicClient --no-build
+dotnet restore src/ForgeIndustrial.slnx
+dotnet build src/ForgeIndustrial.slnx --no-restore
+dotnet run --project src/OpcUaCourse/UaCourse --no-build -- server
 ```
 
-Il primo comando verifica il comportamento e ripristina la ricetta precedente. Il secondo usa solo il client SDK e ComplexTypes: il suo progetto non referenzia UaCourse e non compila RecipeData.
+In a second terminal:
 
-Con nessun server attivo, `verify` avvia il proprio server ed esegue tredici laboratori, incluso questo.
+```powershell
+dotnet run --project src/OpcUaCourse/UaCourse --no-build -- client custom-types
+dotnet run --project src/OpcUaCourse/UaCourse.DynamicClient --no-build
+```
 
-## 1. Definire un contratto preciso
+The first command verifies the behavior and restores the previous recipe. The second uses only the SDK client and ComplexTypes: its project does not reference UaCourse and does not compile RecipeData.
 
-| Campo | DataType UA | ValueRank | Regola |
+With no server running, `verify` starts its own server and runs thirteen labs, including this one.
+
+## 1. Defining a precise contract
+
+| Field | UA DataType | ValueRank | Rule |
 |---|---|---|---|
-| Name | String | Scalar | Non vuoto, massimo 128 caratteri |
-| Revision | UInt32 | Scalar | Maggiore di zero |
-| Target | Double | Scalar | Finito, compreso tra 20 e 90 |
-| Steps | Double | OneDimension | Da 1 a 64 elementi, tutti finiti e tra 20 e 90 |
+| Name | String | Scalar | Not empty, at most 128 characters |
+| Revision | UInt32 | Scalar | Greater than zero |
+| Target | Double | Scalar | Finite, between 20 and 90 |
+| Steps | Double | OneDimension | From 1 to 64 elements, all finite and between 20 and 90 |
 
-Steps è un profilo di target trasportato e conservato. Il simulatore attuale **non esegue una sequenza temporizzata degli step**: LoadRecipe imposta Setpoint al campo Target. Non confondere il trasporto della ricetta con l'implementazione del suo ciclo di processo.
+Steps is a target profile that is carried and stored. The current simulator **does not run a timed sequence of the steps**: LoadRecipe sets Setpoint to the Target field. Do not confuse the transport of the recipe with the implementation of its process cycle.
 
-La Variable `Reactor1.BatchRecipe` usa il nuovo DataType. La vecchia `Reactor1.Recipe` rimane il Range standard della lezione 08, così i due esempi sono confrontabili.
+The Variable `Reactor1.BatchRecipe` uses the new DataType. The old `Reactor1.Recipe` stays the standard Range of lesson 08, so the two examples are comparable.
 
-## 2. Pubblicare il DataType e l'encoding
+## 2. Publishing the DataType and the encoding
 
-Gli identificatori applicativi sono distinti:
+The application identifiers are distinct:
 
 ```text
 urn:uacourse:plant / s=RecipeDataType
 urn:uacourse:plant / s=RecipeDataType.Binary
 ```
 
-Il primo identifica il tipo del valore; il secondo il suo encoding binario. Il client risolve l'indice del namespace in ogni sessione. L'indice numerico non è parte del contratto stabile.
+The first identifies the type of the value; the second its binary encoding. The client resolves the namespace index in every session. The numeric index is not part of the stable contract.
 
-RecipeNodeModel crea DataTypeState con SuperTypeId=Structure e DataTypeDefinition che contiene una StructureDefinition. DefaultEncodingId punta al nodo Default Binary; i campi sono dichiarati nell'ordine Name, Revision, Target, Steps.
+RecipeNodeModel creates a DataTypeState with SuperTypeId=Structure and a DataTypeDefinition that contains a StructureDefinition. DefaultEncodingId points to the Default Binary node; the fields are declared in the order Name, Revision, Target, Steps.
 
-HasEncoding è un riferimento esplicito dal DataType all'oggetto encoding. Non basta trattare l'encoding come un normale figlio gerarchico: il laboratorio controlla che HasEncoding sia navigabile e il client dinamico lo usa per ricostruire il contratto.
+HasEncoding is an explicit reference from the DataType to the encoding object. It is not enough to treat the encoding as a normal hierarchical child: the lab checks that HasEncoding is navigable and the dynamic client uses it to rebuild the contract.
 
-## 3. Codificare e decodificare nello stesso ordine
+## 3. Encoding and decoding in the same order
 
-Estratto della classe realmente usata:
+Excerpt of the class actually used:
 
 ```csharp
 encoder.WriteString(nameof(Name), Name);
@@ -76,17 +76,17 @@ encoder.WriteDouble(nameof(Target), Target);
 encoder.WriteDoubleArray(nameof(Steps), Steps);
 ```
 
-Decode legge gli stessi tipi nello stesso ordine. Non riordinare questi campi per migliorare l'aspetto della classe: l'ordine è parte della rappresentazione binaria. Le funzioni PushNamespace/PopNamespace delimitano il contesto di codifica.
+Decode reads the same types in the same order. Do not reorder these fields to improve the look of the class: the order is part of the binary representation. The PushNamespace/PopNamespace functions delimit the encoding context.
 
-TypeId e BinaryEncodingId sono ExpandedNodeId con URI stabile. Questa versione espone solo l'encoding binario personalizzato; XmlEncodingId è nullo. Non dichiara encoding XML o JSON custom che non implementa nel modello.
+TypeId and BinaryEncodingId are ExpandedNodeIds with a stable URI. This version exposes only the custom binary encoding; XmlEncodingId is null. It does not declare custom XML or JSON encodings that it does not implement in the model.
 
-La classe implementa IEncodeable e Clone copia anche l'array. Un clone superficiale condividerebbe Steps, consentendo a una modifica locale di alterare una ricetta già conservata in memoria. Decode normalizza un array nullo a un array vuoto, che la validazione poi rifiuta.
+The class implements IEncodeable and Clone also copies the array. A shallow clone would share Steps, allowing a local change to alter a recipe already stored in memory. Decode normalizes a null array to an empty array, which validation then rejects.
 
-## 4. Ricevere la struttura in un Method
+## 4. Receiving the structure in a Method
 
-Il metodo `LoadRecipe(Recipe: RecipeDataType) → AcceptedRevision: UInt32` espone la firma nelle proprietà InputArguments e OutputArguments.
+The method `LoadRecipe(Recipe: RecipeDataType) → AcceptedRevision: UInt32` exposes its signature in the InputArguments and OutputArguments properties.
 
-Il client statico costruisce una ricetta:
+The static client builds a recipe:
 
 ```csharp
 var recipe = new UaCourse.Models.RecipeData
@@ -102,55 +102,55 @@ var output = session.Call(
     new Opc.Ua.ExtensionObject(recipe));
 ```
 
-Il callback accetta il corpo encodeable, verifica tutte le regole prima di modificare lo stato, conserva un clone, aggiorna Setpoint, restituisce Revision ed emette un evento. Tutto avviene nel Lock del NodeManager.
+The callback accepts the encodeable body, checks all the rules before changing the state, keeps a clone, updates Setpoint, returns the Revision and emits an event. All of this happens inside the Lock of the NodeManager.
 
-BadTypeMismatch indica che il corpo non è il tipo atteso; BadOutOfRange indica una ricetta che viola le regole applicative. Non descrivere Name vuoto come un successo parziale: viene rifiutata l'intera operazione.
+BadTypeMismatch indicates that the body is not the expected type; BadOutOfRange indicates a recipe that violates the application rules. Do not describe an empty Name as a partial success: the whole operation is rejected.
 
-## 5. Verificare anche la subscription
+## 5. Verifying the subscription too
 
-Il laboratorio crea un MonitoredItem su BatchRecipe prima della Call. Ignora la notifica iniziale e attende una ricetta con nome e revisione della richiesta inviata. Poi confronta tutti i campi, incluso l'array.
+The lab creates a MonitoredItem on BatchRecipe before the Call. It ignores the initial notification and waits for a recipe with the name and revision of the request sent. Then it compares all the fields, including the array.
 
-Questo dimostra più di un cast locale: il valore passa attraverso il server TCP e Publish. Tuttavia il client statico conosce ancora la classe e potrebbe mascherare metadata mancanti. Per questo serve il secondo client.
+This proves more than a local cast: the value goes through the TCP server and Publish. However, the static client still knows the class and could mask missing metadata. That is why the second client is needed.
 
-## 6. Decodifica indipendente
+## 6. Independent decoding
 
-DynamicClient usa `ComplexTypeSystem(session).Load()` per caricare le definizioni disponibili. Non registra RecipeData nella factory. Il tipo CLR stampato viene generato a runtime:
+DynamicClient uses `ComplexTypeSystem(session).Load()` to load the available definitions. It does not register RecipeData in the factory. The CLR type printed is generated at runtime:
 
 ```text
-Tipo CLR generato: Opc.Ua.ComplexTypes.plant.<indice>.RecipeDataType
+Generated CLR type: Opc.Ua.ComplexTypes.plant.<index>.RecipeDataType
 Name = Standard
 Revision = 1
 Target = 60
 Steps = 20, 40, 60
-OK: ricetta decodificata senza assembly del server e senza RecipeData
+OK: recipe decoded without the server assembly and without RecipeData
 ```
 
-Il nome del tipo generato e l'indice possono cambiare; i valori riflettono la ricetta corrente. Il client usa IComplexTypeProperties per leggere i campi, non un cast alla classe del server.
+The name of the generated type and the index can change; the values reflect the current recipe. The client uses IComplexTypeProperties to read the fields, not a cast to the class of the server.
 
-La configurazione del certificato è condivisa come file sorgente neutro: non contiene né registra la classe della ricetta. Il processo dinamico e la sua factory sono indipendenti dal processo del server.
+The certificate configuration is shared as a neutral source file: it neither contains nor registers the recipe class. The dynamic process and its factory are independent of the server process.
 
-## 7. NodeSet2 e sinottico Blazor
+## 7. NodeSet2 and the Blazor synoptic
 
-All'avvio il server esporta `.artifacts/models/Recipe.NodeSet2.xml` dalla stessa definizione usata a runtime. È un **frammento del modello** contenente il tipo e l'encoding; non è l'intero address space e non è ancora un modello generato/versionato con tutte le dipendenze RequiredModel.
+At startup the server exports `<artifacts root>/models/Recipe.NodeSet2.xml` from the same definition used at runtime. It is a **fragment of the model** containing the type and the encoding; it is not the whole address space and it is not yet a generated/versioned model with all the RequiredModel dependencies.
 
-Nel file il namespace può essere ns=1 mentre nel server è ns=2: le rispettive NamespaceUris spiegano la differenza. Un importatore deve rimappare gli indici.
+In the file the namespace can be ns=1 while in the server it is ns=2: the respective NamespaceUris explain the difference. An importer must remap the indices.
 
-Il pannello Blazor aggiunge nome e revisione, `Carica RecipeDataType · Call` e `Leggi ricetta custom`. Il target del pannello viene inserito nel campo Target e nel profilo [20,40,target]. Le risposte riportano la revisione accettata o la struttura letta.
+The Blazor panel adds name and revision, `Load RecipeDataType · Call` and `Read custom recipe`. The target of the panel is put in the Target field and in the profile [20,40,target]. The responses report the accepted revision or the structure read.
 
-## Esercizi con soluzione e verifica
+## Exercises with solution and verification
 
-**Ricetta invalida.** Inserisci uno step NaN. La Call deve fallire con BadOutOfRange e il readback deve essere uguale alla ricetta precedente. RunCustomTypes esegue questa prova.
+**Invalid recipe.** Insert a NaN step. The Call must fail with BadOutOfRange and the readback must equal the previous recipe. RunCustomTypes performs this test.
 
-**Clone.** Clona una ricetta e cambia Steps[0] nella copia. L'originale non deve cambiare. La soluzione è la copia dell'array in Clone, non il solo MemberwiseClone.
+**Clone.** Clone a recipe and change Steps[0] in the copy. The original must not change. The solution is the copy of the array in Clone, not MemberwiseClone alone.
 
-**Tipo sconosciuto.** Rimuovi la registrazione statica dal client di una copia del progetto: un corpo non decodificato non va trasformato in JSON per supposizione. La soluzione disponibile è il client dinamico che carica il contratto prima della Read.
+**Unknown type.** Remove the static registration from the client of a copy of the project: a body that is not decoded must not be turned into JSON by guesswork. The available solution is the dynamic client that loads the contract before the Read.
 
-**Evoluzione.** Aggiungi un campo al modello in un ramo di esercizio. Devi aggiornare definizione, Encode, Decode e test; valuta nuovi identificatori quando il layout è incompatibile. Non mantenere gli stessi id cambiando il significato dei campi e presumere compatibilità.
+**Evolution.** Add a field to the model in an exercise branch. You must update the definition, Encode, Decode and the tests; consider new identifiers when the layout is incompatible. Do not keep the same ids while changing the meaning of the fields and presume compatibility.
 
-## Limiti e prossimo incremento
+## Limits and next increment
 
-Il laboratorio verifica decodifica statica/dinamica, metadati, Call, Read e subscription. Non include ancora campi opzionali, union, enum custom, import del NodeSet nel server o generazione ModelCompiler. La fase successiva è rendere la generazione riproducibile e verificare la compatibilità con una versione precedente del modello.
+The lab verifies static/dynamic decoding, metadata, Call, Read and subscription. It does not yet include optional fields, unions, custom enums, import of the NodeSet into the server or ModelCompiler generation. The next phase is to make the generation reproducible and to verify compatibility with a previous version of the model.
 
-Riferimenti: [DataTypeDefinition, Part 3](https://reference.opcfoundation.org/Core/Part3/), [ExtensionObject, Part 6](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.15), [SDK ufficiale](https://github.com/OPCFoundation/UA-.NETStandard/tree/1.5.374.158).
+References: [DataTypeDefinition, Part 3](https://reference.opcfoundation.org/Core/Part3/), [ExtensionObject, Part 6](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.15), [official SDK](https://github.com/OPCFoundation/UA-.NETStandard) (package version 1.5.376.244).
 
-[Indice](README.md) · [Uso dei sample](../USAGE.md) · [Architettura](../ARCHITECTURE.md)
+[Index](README.md) · [Using the samples](../USAGE.md) · [Architecture](../ARCHITECTURE.md)

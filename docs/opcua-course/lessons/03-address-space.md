@@ -1,45 +1,45 @@
-# Address space, riferimenti e namespace
+# Address space, references and namespaces
 
-## Concetti
+## Concepts
 
-L'address space è un grafo. Organizes esprime organizzazione, HasComponent composizione, HasProperty metadata, HasTypeDefinition il tipo dell'istanza e HasSubtype l'ereditarietà. BrowseName è una QualifiedName usata nei percorsi; DisplayName è localizzabile e serve alla presentazione. NodeId identifica un nodo nel contesto del server.
+The address space is a graph. Organizes expresses organization, HasComponent composition, HasProperty metadata, HasTypeDefinition the type of the instance and HasSubtype inheritance. BrowseName is a QualifiedName used in paths; DisplayName is localizable and serves presentation. NodeId identifies a node in the context of the server.
 
-## Esperimento
+## Experiment
 
-Esegui client browse. Il server limita il primo risultato a due riferimenti: BrowseNext percorre i continuation point fino al loro esaurimento.
+Run client browse. The server limits the first result to two references: BrowseNext walks the continuation points until they are exhausted.
 
-## Nel codice C#
+## In the C# code
 
-Lessons.Id consulta NamespaceUris usando urn:uacourse:plant. Non salvare un indice ns=2 come identificatore portabile: può cambiare dopo modifiche o reconnect. Memorizza URI del namespace e identificatore.
+Lessons.Id consults NamespaceUris using urn:uacourse:plant. Do not store an ns=2 index as a portable identifier: it can change after modifications or a reconnect. Store the namespace URI and the identifier.
 
-## Esercizio e verifica
+## Exercise and verification
 
-Aggiungi Reactor2 con lo stesso tipo e gli stessi nomi relativi. Implementa un browse ricorsivo con visited set, limite di profondità e rilascio dei continuation point se l'utente interrompe.
+Add Reactor2 with the same type and the same relative names. Implement a recursive browse with a visited set, a depth limit and the release of the continuation points if the user interrupts.
 
-## Errore da evitare
+## Mistake to avoid
 
-Un grafo può avere più genitori e cicli. Non assumere che Browse restituisca un albero o tutti i riferimenti in una risposta.
+A graph can have several parents and cycles. Do not assume that Browse returns a tree or all the references in one response.
 
-## Obiettivi e punto di partenza
+## Goals and starting point
 
-Tempo indicativo: 90 minuti. Imparerai a leggere un grafo di nodi, gestire la paginazione e risolvere percorsi relativi. Laboratori: [RunBrowse.cs](../../src/UaCourse/Labs/RunBrowse.cs) e [RunPaths.cs](../../src/UaCourse/Labs/RunPaths.cs).
+Estimated time: 90 minutes. You will learn to read a graph of nodes, handle pagination and resolve relative paths. Labs: [RunBrowse.cs](../../../src/OpcUaCourse/UaCourse/Labs/RunBrowse.cs) and [RunPaths.cs](../../../src/OpcUaCourse/UaCourse/Labs/RunPaths.cs).
 
 ```powershell
-dotnet run --project src/UaCourse -- client browse
-dotnet run --project src/UaCourse -- client paths
+dotnet run --project src/OpcUaCourse/UaCourse -- client browse
+dotnet run --project src/OpcUaCourse/UaCourse -- client paths
 ```
 
-## Identità, nome e presentazione
+## Identity, name and presentation
 
-Un NodeId combina namespace index e identificatore, che può essere numerico, stringa, Guid o ByteString. Il NamespaceArray della sessione collega l'indice al suo URI. Un ExpandedNodeId può portare informazioni ulteriori: non convertirlo a NodeId senza considerare URI e server index.
+A NodeId combines a namespace index and an identifier, which can be numeric, string, Guid or ByteString. The NamespaceArray of the session links the index to its URI. An ExpandedNodeId can carry further information: do not convert it to a NodeId without considering URI and server index.
 
-BrowseName è una QualifiedName. La stessa stringa Temperature in due namespace può identificare nomi qualificati differenti. DisplayName è invece un LocalizedText destinato all'utente: tradurlo non deve rompere un percorso applicativo.
+BrowseName is a QualifiedName. The same string Temperature in two namespaces can identify different qualified names. DisplayName is instead a LocalizedText intended for the user: translating it must not break an application path.
 
-Nel corso usiamo identificatori stringa leggibili, come Reactor1.Temperature. Il punto non impone una gerarchia al protocollo: è una convenzione del nostro identificatore. La gerarchia reale dipende dai riferimenti.
+In the course we use readable string identifiers, such as Reactor1.Temperature. The dot does not impose a hierarchy on the protocol: it is a convention of our identifier. The real hierarchy depends on the references.
 
-## Browse passo per passo
+## Browse step by step
 
-Il laboratorio chiede riferimenti gerarchici forward e un massimo di due risultati per risposta:
+The lab asks for forward hierarchical references and a maximum of two results per response:
 
 ```csharp
 session.Browse(null, null, Lessons.Id(session, "Reactor1"), 2,
@@ -47,27 +47,27 @@ session.Browse(null, null, Lessons.Id(session, "Reactor1"), 2,
     true, 0, out var continuationPoint, out var references);
 ```
 
-HierarchicalReferences è una famiglia di tipi; includeSubtypes=true include i riferimenti derivati. NodeClassMask=0 non limita i risultati a una sola classe. Non significa che ogni nodo sia una Variable: troverai anche i metodi.
+HierarchicalReferences is a family of types; includeSubtypes=true includes the derived references. NodeClassMask=0 does not restrict the results to a single class. It does not mean that every node is a Variable: you will also find the methods.
 
-La risposta contiene riferimenti, non valori correnti. Per ogni ReferenceDescription puoi osservare ReferenceTypeId, IsForward, BrowseName, NodeClass e TypeDefinition. Per leggere Temperature occorre una successiva Read del nodo trovato.
+The response contains references, not current values. For each ReferenceDescription you can observe ReferenceTypeId, IsForward, BrowseName, NodeClass and TypeDefinition. To read Temperature a subsequent Read of the node found is needed.
 
-Il continuation point è un token opaco del server. Quando è presente chiama BrowseNext, accumula i riferimenti e continua fino a quando non è più restituito. Se interrompi l'esplorazione prima della fine, rilascia il token con releaseContinuationPoints=true. Nel nostro percorso completo i token vengono consumati fino all'esaurimento.
+The continuation point is an opaque token of the server. When it is present, call BrowseNext, accumulate the references and continue until it is no longer returned. If you interrupt the exploration before the end, release the token with releaseContinuationPoints=true. In our complete path the tokens are consumed until exhaustion.
 
-## Percorsi relativi
+## Relative paths
 
-RunPaths costruisce due RelativePathElement: Reactor1 e Temperature, entrambi qualificati nel namespace applicativo. StartingNode è Plant. Il risultato atteso è una sola destinazione e status Good:
+RunPaths builds two RelativePathElements: Reactor1 and Temperature, both qualified in the application namespace. The StartingNode is Plant. The expected result is a single target and status Good:
 
 ```text
 Plant → Reactor1 → Temperature
 Translate: Good, targets=1
-ns=<indice della sessione>;s=Reactor1.Temperature
+ns=<index of the session>;s=Reactor1.Temperature
 ```
 
-Il servizio può restituire più destinazioni o un percorso non completamente risolto. In un client generale controlla anche RemainingPathIndex e rifiuta target remoti se la tua applicazione non li gestisce. La singola asserzione del laboratorio è sufficiente per questo modello conosciuto, non per qualunque address space.
+The service can return several targets or a path that is not completely resolved. In a general client also check RemainingPathIndex and reject remote targets if your application does not handle them. The single assertion of the lab is enough for this known model, not for any address space.
 
-## Esercizio risolto: esplorazione senza cicli
+## Solved exercise: exploration without cycles
 
-Progetta un browse ricorsivo. Non usare la profondità come unica protezione: due oggetti possono riferirsi reciprocamente.
+Design a recursive browse. Do not use depth as the only protection: two objects can refer to each other.
 
 ```csharp
 var visited = new HashSet<string>();
@@ -75,12 +75,12 @@ bool FirstVisit(ExpandedNodeId id)
     => visited.Add(id.ToString());
 ```
 
-Questo frammento illustra il controllo; in un'applicazione multi-server conserva un'identità normalizzata con namespace URI e server. Aggiungi limite di profondità, massimo numero di nodi e CancellationToken. Ogni chiamata Browse deve gestire i propri continuation point.
+This snippet illustrates the check; in a multi-server application keep a normalized identity with namespace URI and server. Add a depth limit, a maximum number of nodes and a CancellationToken. Every Browse call must manage its own continuation points.
 
-**Soluzione.** Visita ciascun nodo una sola volta per il traversal richiesto, ma conserva separatamente gli archi: saltare una visita ripetuta non autorizza a cancellare un riferimento significativo dal grafo mostrato.
+**Solution.** Visit each node only once for the required traversal, but keep the edges separately: skipping a repeated visit does not authorize you to delete a significant reference from the graph shown.
 
-**Diagnostica.** BadNoMatch durante Translate suggerisce BrowseName, namespace, direzione o filtro di riferimento errati. Non passare automaticamente a un Read con un NodeId costruito per supposizione.
+**Diagnostics.** BadNoMatch during Translate suggests a wrong BrowseName, namespace, direction or reference filter. Do not automatically fall back to a Read with a NodeId built by guesswork.
 
-Riferimenti: [Address Space Model](https://reference.opcfoundation.org/Core/Part3/), [View Service Set](https://reference.opcfoundation.org/Core/Part4/v105/docs/5.9).
+References: [Address Space Model](https://reference.opcfoundation.org/Core/Part3/), [View Service Set](https://reference.opcfoundation.org/Core/Part4/v105/docs/5.9).
 
-[Indice](README.md) · [Uso dei sample](../USAGE.md) · [Architettura](../ARCHITECTURE.md)
+[Index](README.md) · [Using the samples](../USAGE.md) · [Architecture](../ARCHITECTURE.md)

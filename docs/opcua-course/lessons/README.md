@@ -1,50 +1,52 @@
-# Percorso didattico
+# Teaching path
 
-Le lezioni 01–12 hanno laboratori sul codice disponibile; la 13 combina sicurezza attuale e progetto delle autorizzazioni. Le 14–18 sono approfondimenti con estensioni da implementare. La 09 include DataType custom, metodo strutturato, subscription e client dinamico indipendente. Ogni lezione collega concetti, codice, esperimenti e verifiche.
+Lessons 01–12 have labs on the available code; lesson 13 combines the current security with the design of authorizations. Lessons 14–18 are deep-dives with extensions still to be implemented. Lesson 09 includes a custom DataType, a structured method, a subscription and an independent dynamic client. Every lesson connects concepts, code, experiments and verifications.
 
-1. [Dal tag al modello informativo](01-fondamenti.md)
-2. [Discovery, endpoint, SecureChannel e Session](02-sessioni.md)
-3. [Address space, riferimenti e namespace](03-address-space.md)
-4. [Read, Write, qualità, timestamp e batch](04-read-write.md)
-5. [ObjectType, VariableType e regole di modellazione](05-modellazione.md)
-6. [Method, argomenti e semantica dei comandi](06-metodi.md)
-7. [Subscription, MonitoredItem, Publish e deadband](07-subscription.md)
-8. [Variant, array, ExtensionObject e strutture standard](08-strutture.md)
-9. [Tipi personalizzati e NodeSet2](09-custom-types.md)
-10. [EventType, EventNotifier e filtri](10-eventi.md)
-11. [Sinottici modulari e lifecycle Blazor](11-blazor.md)
-12. [Riconnessione e continuità dei dati](12-recovery.md)
-13. [Certificati, identità, autorizzazione e audit](13-sicurezza.md)
-14. [Alarms & Conditions: stato, acknowledge e refresh](14-alarms.md)
-15. [Historical Access e trend](15-history.md)
-16. [State machine, FileType e contratti di processo](16-state-files.md)
-17. [PubSub, DataSet e trasporti](17-pubsub.md)
-18. [NodeSet, companion specification, diagnostica e progetto finale](18-interoperabilita.md)
+1. [From the tag to the information model](01-fundamentals.md)
+2. [Discovery, endpoints, SecureChannel and Session](02-sessions.md)
+3. [Address space, references and namespaces](03-address-space.md)
+4. [Read, Write, quality, timestamps and batches](04-read-write.md)
+5. [ObjectType, VariableType and modeling rules](05-modeling.md)
+6. [Methods, arguments and the semantics of commands](06-methods.md)
+7. [Subscriptions, MonitoredItems, Publish and deadband](07-subscription.md)
+8. [Variant, arrays, ExtensionObject and standard structures](08-structures.md)
+9. [Custom types and NodeSet2](09-custom-types.md)
+10. [EventType, EventNotifier and filters](10-events.md)
+11. [Modular synoptics and the Blazor lifecycle](11-blazor.md)
+12. [Reconnection and data continuity](12-recovery.md)
+13. [Certificates, identity, authorization and audit](13-security.md)
+14. [Alarms & Conditions: state, acknowledge and refresh](14-alarms.md)
+15. [Historical Access and trends](15-history.md)
+16. [State machines, FileType and process contracts](16-state-files.md)
+17. [PubSub, DataSets and transports](17-pubsub.md)
+18. [NodeSet, companion specifications, diagnostics and the final project](18-interoperability.md)
 
-Il comando `verify` copre tredici laboratori client/server, non le estensioni non implementate. Per i comandi completi vedere [USAGE](../USAGE.md).
+The `verify` command covers thirteen client/server labs, not the unimplemented extensions. For the complete commands see [USAGE](../USAGE.md).
 
-## Come seguire il corso
+## How to follow the course
 
-Ogni capitolo contiene una sintesi iniziale, obiettivi e prerequisiti, spiegazione del contratto UA, percorso C# guidato, risultati attesi, errori e una soluzione ragionata degli esercizi. I frammenti dichiarati di progetto non vanno confusi con funzionalità già disponibili nel simulatore.
+Every chapter contains an initial summary, goals and prerequisites, an explanation of the UA contract, a guided C# path, expected results, errors and a reasoned solution of the exercises. The project snippets declared as such must not be confused with features already available in the simulator.
 
-Percorso consigliato: lezioni 01–08 per il nucleo del protocollo; 10–13 per eventi, UI, recovery e sicurezza; poi 09 e 14–18 per progettare estensioni interoperabili. I tempi dei capitoli sono indicativi e non includono lo sviluppo completo delle estensioni.
+Recommended path: lessons 01–08 for the core of the protocol; 10–13 for events, UI, recovery and security; then 09 and 14–18 to design interoperable extensions. The chapter times are indicative and do not include the full development of the extensions.
 
-## Mappa dei laboratori e delle soluzioni
+## Map of the labs and solutions
 
-| Capitolo | Comando o prova | Codice da studiare | Criterio |
+Paths are relative to the repository root: the code lives under `src/OpcUaCourse/`.
+
+| Chapter | Command or exercise | Code to study | Criterion |
 |---|---|---|---|
-| 01–02 | `client read` | [Program](../../src/UaCourse/Program.cs), [Configuration](../../src/UaCourse/Configuration.cs) | Sessione sicura e misura con qualità |
-| 03 | `client browse`, `client paths` | [Browse](../../src/UaCourse/Labs/RunBrowse.cs), [Paths](../../src/UaCourse/Labs/RunPaths.cs) | Pagine consumate e percorso risolto |
-| 04 | `client read`, `client write`, `client errors` | [Read](../../src/UaCourse/Labs/RunRead.cs), [Write](../../src/UaCourse/Labs/RunWrite.cs), [Errors](../../src/UaCourse/Labs/RunErrors.cs) | Risultati distinti e readback |
-| 05 | `client model` | [Model](../../src/UaCourse/Labs/RunModel.cs) | Tipo, Mandatory e DataType coerenti |
-| 06 | `client methods`, `client method-errors` | [Methods](../../src/UaCourse/Labs/RunMethods.cs), [MethodErrors](../../src/UaCourse/Labs/RunMethodErrors.cs) | Output, precondizioni, stato dopo rifiuto |
-| 07 | `client subscribe` | [Notifications](../../src/UaCourse/Labs/ObserveNotifications.cs) | Notifica e stato dell'item |
-| 08 | `client types`, `client ranges` | [Types](../../src/UaCourse/Labs/RunTypes.cs), [Ranges](../../src/UaCourse/Labs/RunRanges.cs) | Struttura, array e IndexRange |
-| 09 | `client custom-types` e `UaCourse.DynamicClient` | [RecipeData](../../src/UaCourse/Models/RecipeData.cs), [RecipeNodeModel](../../src/UaCourse/Models/RecipeNodeModel.cs), [lab](../../src/UaCourse/Labs/RunCustomTypes.cs) | Read/Call/Publish e decoding senza DLL server |
-| 10 | `client events` | [Notifications](../../src/UaCourse/Labs/ObserveNotifications.cs) | EventFieldList secondo SelectClauses |
-| 11 | Browser e runner layout | [UaConnection](../../src/UaCourse.Web/Services/UaConnection.cs), [runner](../../scripts/check-layout.cjs) | Label, cambio schermata e comandi |
-| 12 | Arresto/ripartenza server | [UaConnection](../../src/UaCourse.Web/Services/UaConnection.cs) | Cache invalidata e nuove subscription |
-| 13 | Trust attuale + progetto ruoli | [Configuration](../../src/UaCourse/Configuration.cs) | Distinguere canale, utente e autorizzazione |
-| 14–18 | Progetti avanzati | Contratti ed esercizi nei capitoli | Criteri expected/actual per ogni estensione |
+| 01–02 | `client read` | [Program](../../../src/OpcUaCourse/UaCourse/Program.cs), [Configuration](../../../src/OpcUaCourse/UaCourse/Configuration.cs) | Secure session and a measurement with quality |
+| 03 | `client browse`, `client paths` | [Browse](../../../src/OpcUaCourse/UaCourse/Labs/RunBrowse.cs), [Paths](../../../src/OpcUaCourse/UaCourse/Labs/RunPaths.cs) | Pages consumed and path resolved |
+| 04 | `client read`, `client write`, `client errors` | [Read](../../../src/OpcUaCourse/UaCourse/Labs/RunRead.cs), [Write](../../../src/OpcUaCourse/UaCourse/Labs/RunWrite.cs), [Errors](../../../src/OpcUaCourse/UaCourse/Labs/RunErrors.cs) | Distinct results and readback |
+| 05 | `client model` | [Model](../../../src/OpcUaCourse/UaCourse/Labs/RunModel.cs) | Consistent type, Mandatory and DataType |
+| 06 | `client methods`, `client method-errors` | [Methods](../../../src/OpcUaCourse/UaCourse/Labs/RunMethods.cs), [MethodErrors](../../../src/OpcUaCourse/UaCourse/Labs/RunMethodErrors.cs) | Output, preconditions, state after a rejection |
+| 07 | `client subscribe` | [Notifications](../../../src/OpcUaCourse/UaCourse/Labs/ObserveNotifications.cs) | Notification and item state |
+| 08 | `client types`, `client ranges` | [Types](../../../src/OpcUaCourse/UaCourse/Labs/RunTypes.cs), [Ranges](../../../src/OpcUaCourse/UaCourse/Labs/RunRanges.cs) | Structure, array and IndexRange |
+| 09 | `client custom-types` and `UaCourse.DynamicClient` | [RecipeData](../../../src/OpcUaCourse/UaCourse/Models/RecipeData.cs), [RecipeNodeModel](../../../src/OpcUaCourse/UaCourse/Models/RecipeNodeModel.cs), [lab](../../../src/OpcUaCourse/UaCourse/Labs/RunCustomTypes.cs) | Read/Call/Publish and decoding without the server DLL |
+| 10 | `client events` | [Notifications](../../../src/OpcUaCourse/UaCourse/Labs/ObserveNotifications.cs) | EventFieldList according to the SelectClauses |
+| 11 | Browser and layout runner | [UaConnection](../../../src/OpcUaCourse/UaCourse.Web/Services/UaConnection.cs), [runner](../../../src/OpcUaCourse/scripts/check-layout.cjs) | Labels, screen change and commands |
+| 12 | Server stop/restart | [UaConnection](../../../src/OpcUaCourse/UaCourse.Web/Services/UaConnection.cs) | Cache invalidated and new subscriptions |
+| 13 | Current trust + roles design | [Configuration](../../../src/OpcUaCourse/UaCourse/Configuration.cs) | Distinguish channel, user and authorization |
+| 14–18 | Advanced projects | Contracts and exercises in the chapters | Expected/actual criteria for each extension |
 
-Le implementazioni sono separate in `src/UaCourse/Labs`; `Lessons.cs` conserva dispatch e helper. Il tipo custom è disponibile con codice encodeable manuale ed export NodeSet2 parziale; la generazione automatica resta futura. A&C, storico, FileType e PubSub richiedono ancora moduli dedicati.
+The implementations are separate in `src/OpcUaCourse/UaCourse/Labs`; `Lessons.cs` keeps the dispatch and the helpers. The custom type is available with manual encodeable code and a partial NodeSet2 export; automatic generation remains future work. A&C, history, FileType and PubSub still require dedicated modules.

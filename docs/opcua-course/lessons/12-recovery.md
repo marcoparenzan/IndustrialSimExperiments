@@ -1,71 +1,71 @@
-# Riconnessione e continuità dei dati
+# Reconnection and data continuity
 
-## Concetti
+## Concepts
 
-TCP, SecureChannel, Session e Subscription hanno tempi e recuperi diversi. Ricreare una sessione è semplice ma perde il contesto precedente. Riattivare una sessione o trasferire subscription può mantenere più continuità se server e identità lo consentono. Republish può recuperare messaggi ancora nel buffer, non creare campioni mai conservati.
+TCP, SecureChannel, Session and Subscription have different times and recoveries. Recreating a session is simple but loses the previous context. Reactivating a session or transferring subscriptions can keep more continuity if server and identity allow it. Republish can recover messages still in the buffer, not create samples that were never kept.
 
-## Esperimento
+## Experiment
 
-Con web app aperta arresta il server, attendi KeepAlive fallito, riavvia. Le label diventano indisponibili e vengono ripopolate da nuove subscription. Nessun comando viene accodato automaticamente per essere eseguito dopo la riconnessione.
+With the web app open, stop the server, wait for the failed KeepAlive, restart. The labels become unavailable and are repopulated by new subscriptions. No command is queued automatically to be executed after the reconnection.
 
-## Nel codice C#
+## In the C# code
 
-UaConnection imposta KeepAliveInterval=2000 e ricostruisce sessione e item dopo 3 s. Snapshot svuotato, log warning, comandi protetti da SemaphoreSlim. Non implementa SessionReconnectHandler, trasferimento o Republish manuale.
+UaConnection sets KeepAliveInterval=2000 and rebuilds session and items after 3 s. Snapshot emptied, warning logged, commands protected by a SemaphoreSlim. It implements no SessionReconnectHandler, no transfer and no manual Republish.
 
-## Esercizio e verifica
+## Exercise and verification
 
-Rendi il retry esponenziale con jitter e limite, aggiungi contatori di reconnect e timestamp ultimo dato. Simula rete interrotta senza arrestare il server e confronta con riavvio server.
+Make the retry exponential with jitter and a limit, add reconnect counters and the timestamp of the last data. Simulate an interrupted network without stopping the server and compare with a server restart.
 
-## Errore da evitare
+## Mistake to avoid
 
-Non mostrare l'ultimo valore come Good solo perché il renderer è ancora vivo. Per gli eventi persi servono log persistente o ConditionRefresh, secondo il tipo di informazione.
+Do not show the last value as Good just because the renderer is still alive. For lost events a persistent log or ConditionRefresh is needed, depending on the type of information.
 
-## Obiettivi, prerequisiti e risultato atteso
+## Goals, prerequisites and expected result
 
-Tempo indicativo: 120 minuti. Devi avere compreso le lezioni 02, 07 e 11. L'obiettivo non è soltanto far tornare Connected=true: è decidere cosa succede a qualità, comandi in corso, eventi e identità dei nodi durante un guasto.
+Estimated time: 120 minutes. You must have understood lessons 02, 07 and 11. The goal is not only to make Connected=true come back: it is to decide what happens to quality, commands in progress, events and the identity of the nodes during a failure.
 
-Apri [UaConnection.cs](../../src/UaCourse.Web/Services/UaConnection.cs). Il sample implementa **ricreazione di sessione e subscription**. Non trasferisce subscription e non promette assenza di perdita dati.
+Open [UaConnection.cs](../../../src/OpcUaCourse/UaCourse.Web/Services/UaConnection.cs). The sample implements **recreation of session and subscription**. It does not transfer subscriptions and does not promise the absence of data loss.
 
-## La strategia effettiva, passo per passo
+## The actual strategy, step by step
 
-1. Il servizio apre una Session e configura KeepAliveInterval=2000.
-2. Un handler KeepAlive segnala un risultato Bad tramite TaskCompletionSource.
-3. Il ciclo attende quel segnale o la cancellazione del servizio.
-4. Il finally acquisisce il gate dei comandi, rimuove la sessione attiva e svuota lo snapshot.
-5. Tentano la chiusura subscription/sessione e la Dispose.
-6. Dopo tre secondi il ciclo risolve di nuovo namespace, nodi e item.
+1. The service opens a Session and configures KeepAliveInterval=2000.
+2. A KeepAlive handler signals a Bad result through a TaskCompletionSource.
+3. The loop waits for that signal or for the cancellation of the service.
+4. The finally block acquires the command gate, removes the active session and empties the snapshot.
+5. It attempts to close the subscription/session and Dispose.
+6. After three seconds the loop resolves namespace, nodes and items again.
 
-Il ritardo di due secondi non è una garanzia che l'interfaccia diventi offline entro due secondi: contano timeout delle richieste, scheduler e condizioni di rete. Durante teardown i servizi remoti di chiusura possono fallire; il cleanup locale deve comunque proseguire.
+The two-second delay is not a guarantee that the interface becomes offline within two seconds: request timeouts, the scheduler and network conditions matter. During teardown the remote close services can fail; the local cleanup must continue anyway.
 
-Un segnale KeepAlive Bad seguito da uscita normale da lost.Task non entra necessariamente nel catch: la descrizione Status può rimanere quella precedente mentre Connected è false. Il renderer deve considerare Connected, non interpretare una stringa come stato autorevole.
+A Bad KeepAlive signal followed by a normal exit from lost.Task does not necessarily enter the catch: the Status description can remain the previous one while Connected is false. The renderer must consider Connected, not interpret a string as the authoritative state.
 
-## Quale stato si può recuperare?
+## Which state can be recovered?
 
-| Evento | Scelta semplice del sample | Possibile strategia più evoluta |
+| Event | Simple choice of the sample | Possible more advanced strategy |
 |---|---|---|
-| Canale interrotto, server vivo | Ricreare la sessione | Riattivare quella esistente |
-| Sessione disponibile, client sostituito | Nuove subscription | TransferSubscriptions se autorizzato/supportato |
-| Messaggio Publish perso | Nessun recupero applicativo esplicito | Republish dal buffer disponibile |
-| Server riavviato | Ricreare tutto | Nuova discovery e ricostruzione modello |
-| Allarme attivo dopo reconnect | Non disponibile nel sample | ConditionRefresh |
-| Evento transitorio durante outage | Può andare perso | Log persistente e recupero applicativo |
+| Channel interrupted, server alive | Recreate the session | Reactivate the existing one |
+| Session available, client replaced | New subscriptions | TransferSubscriptions if authorized/supported |
+| Publish message lost | No explicit application recovery | Republish from the available buffer |
+| Server restarted | Recreate everything | New discovery and model rebuild |
+| Active alarm after reconnect | Not available in the sample | ConditionRefresh |
+| Transient event during an outage | Can be lost | Persistent log and application recovery |
 
-Non sovrapporre queste strategie. ConditionRefresh ricostruisce condizioni retained, non una cronologia completa degli eventi.
+Do not overlap these strategies. ConditionRefresh rebuilds retained conditions, not a complete history of events.
 
-## Laboratorio riproducibile
+## Reproducible lab
 
-1. Apri la web app e annota un source timestamp.
-2. Arresta il processo server, lasciando ASP.NET attivo.
-3. Attendi indisponibilità: le label mostrano — e i pulsanti sono disabilitati.
-4. Riavvia il server.
-5. Attendi nuove label con qualità Good.
-6. Leggi una struttura e usa Stop per verificare che anche il percorso comandi sia ricostruito.
+1. Open the web app and note a source timestamp.
+2. Stop the server process, leaving ASP.NET running.
+3. Wait for the unavailability: the labels show — and the buttons are disabled.
+4. Restart the server.
+5. Wait for new labels with Good quality.
+6. Read a structure and use Stop to verify that the command path has been rebuilt too.
 
-Ripeti con un client console appena aperto e confronta NamespaceArray. Il client deve risolvere l'URI dopo ogni nuova sessione, non riutilizzare NodeId con namespace index vecchio.
+Repeat with a freshly opened console client and compare the NamespaceArray. The client must resolve the URI after every new session, not reuse a NodeId with an old namespace index.
 
-## Esercizio risolto: retry con backoff e jitter
+## Solved exercise: retry with backoff and jitter
 
-Frammento C# da integrare al posto del ritardo fisso, non già presente nel servizio:
+C# snippet to integrate in place of the fixed delay, not already present in the service:
 
 ```csharp
 static TimeSpan RetryDelay(int failures)
@@ -77,16 +77,16 @@ static TimeSpan RetryDelay(int failures)
 }
 ```
 
-**Soluzione.** Incrementa failures sui fallimenti, azzeralo soltanto dopo una connessione considerata stabile e usa Task.Delay(delay, stoppingToken). Se azzeri il contatore appena Session.Create riesce, un endpoint che perde subito la connessione può provocare tentativi troppo frequenti.
+**Solution.** Increment failures on failures, reset it only after a connection considered stable and use Task.Delay(delay, stoppingToken). If you reset the counter as soon as Session.Create succeeds, an endpoint that loses the connection immediately can cause attempts that are too frequent.
 
-## Concorrenza e dati di una sessione precedente
+## Concurrency and data from a previous session
 
-Un callback già in corso può terminare durante il cleanup. Per un client robusto assegna a ogni connessione un generation id e accetta aggiornamenti soltanto dalla generazione attiva. Il sample non implementa ancora questo controllo: svuotare il dizionario da solo non prova che nessun callback vecchio possa scrivere dopo lo svuotamento.
+A callback already in progress can finish during the cleanup. For a robust client assign a generation id to every connection and accept updates only from the active generation. The sample does not implement this check yet: emptying the dictionary alone does not prove that no old callback can write after the emptying.
 
-Non accodare automaticamente Start quando offline. Un comando può aver già avuto effetto prima del timeout; la ripetizione deve seguire un contratto idempotente o un correlation id.
+Do not automatically queue Start when offline. A command may already have had an effect before the timeout; repeating it must follow an idempotent contract or a correlation id.
 
-**Criterio di completamento dell'esercizio.** Nessun comando usa una sessione disposta, nessun aggiornamento vecchio viene mostrato come corrente, il retry è cancellabile e il client dichiara eventuale perdita di eventi.
+**Completion criterion of the exercise.** No command uses a disposed session, no old update is shown as current, the retry is cancellable and the client declares any loss of events.
 
-Riferimenti: [Session Services](https://reference.opcfoundation.org/Core/Part4/v105/docs/5.7), [Subscription Services](https://reference.opcfoundation.org/Core/Part4/v105/docs/5.14).
+References: [Session Services](https://reference.opcfoundation.org/Core/Part4/v105/docs/5.7), [Subscription Services](https://reference.opcfoundation.org/Core/Part4/v105/docs/5.14).
 
-[Indice](README.md) · [Uso dei sample](../USAGE.md) · [Architettura](../ARCHITECTURE.md)
+[Index](README.md) · [Using the samples](../USAGE.md) · [Architecture](../ARCHITECTURE.md)

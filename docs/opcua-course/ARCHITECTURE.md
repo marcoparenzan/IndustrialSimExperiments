@@ -1,47 +1,47 @@
-# Architettura
+# Architecture
 
-## Flusso dei dati
+## Data flow
 
 ```mermaid
 flowchart LR
-    Sim[PlantNodeManager: simulazione 500 ms] --> UA[StandardServer: UA TCP 4841]
-    UA -->|Publish: DataValue ed EventFieldList| Conn[UaConnection: sessione e subscription]
-    Conn --> Cache[Snapshot thread safe e ultimi 50 eventi]
-    Cache --> UI[Synoptic e Dashboard: Blazor Server]
+    Sim[PlantNodeManager: 500 ms simulation] --> UA[StandardServer: UA TCP 4841]
+    UA -->|Publish: DataValue and EventFieldList| Conn[UaConnection: session and subscription]
+    Conn --> Cache[Thread-safe snapshot and last 50 events]
+    Cache --> UI[Synoptic and Dashboard: Blazor Server]
     UI -->|SignalR| Browser[Browser]
     UI -->|Write / Call / Read| Conn
-    Console[Lessons: client console e verifica] <--> UA
+    Console[Lessons: console client and verification] <--> UA
 ```
 
-La simulazione vive nel server, non nel browser. Una label non genera una richiesta Read periodica: i dati sono accodati dai MonitoredItem e consegnati attraverso Publish. Il timer UI di 500 ms rende lo snapshot già ricevuto; non interroga OPC UA.
+The simulation lives in the server, not in the browser. A label does not generate a periodic Read request: the data is queued by the MonitoredItems and delivered through Publish. The 500 ms UI timer renders the snapshot that has already been received; it does not query OPC UA.
 
-## Responsabilità
+## Responsibilities
 
-| Modulo | Responsabilità |
+| Module | Responsibility |
 |---|---|
-| `UaCourse/Configuration.cs` | Configurazione UA, certificati, endpoint, trust locale |
-| `UaCourse/PlantServer.cs` | Server, NodeManager, address space, simulazione, metodi, eventi |
-| `UaCourse/Lessons.cs` | Client didattico e asserzioni dei servizi UA |
-| `UaCourse/Labs/*.cs` | Implementazioni separate dei laboratori e soluzioni eseguibili |
-| `UaCourse/Models/RecipeData.cs` | Contratto encodeable e validazione della ricetta custom |
-| `UaCourse/Models/RecipeNodeModel.cs` | Tipo pubblico, encoding, LoadRecipe ed export NodeSet2 parziale |
-| `UaCourse.DynamicClient` | Decoder dinamico indipendente, senza riferimento alla DLL del server |
-| `UaCourse.Web/Modules/ScreenCatalog.cs` | Catalogo dichiarativo di schermate e binding |
-| `UaCourse.Web/Services/UaConnection.cs` | Sessione condivisa, monitored item, eventi, retry e comandi |
-| `UaCourse.Web/Components/Synoptic.razor` | Sfondo e label percentuali, qualità e timestamp |
-| `UaCourse.Web/Components/Pages/Home.razor` | Indice neutro e link alle dashboard generati dal catalogo |
-| `UaCourse.Web/Components/Layout/MainLayout.razor` | Template UA Lab e navigazione condivisa generata dal catalogo |
-| `UaCourse.Web/Components/Pages/Dashboard.razor` | Selezione tramite rotta, comandi, risultati e lifecycle del circuito |
+| `UaCourse/Configuration.cs` | UA configuration, certificates, endpoint, local trust, artifacts root |
+| `UaCourse/PlantServer.cs` | Server, NodeManager, address space, simulation, methods, events |
+| `UaCourse/Lessons.cs` | Teaching client and assertions of the UA services |
+| `UaCourse/Labs/*.cs` | Separate implementations of the labs and executable solutions |
+| `UaCourse/Models/RecipeData.cs` | Encodeable contract and validation of the custom recipe |
+| `UaCourse/Models/RecipeNodeModel.cs` | Public type, encoding, LoadRecipe and partial NodeSet2 export |
+| `UaCourse.DynamicClient` | Independent dynamic decoder, with no reference to the server DLL |
+| `UaCourse.Web/Modules/ScreenCatalog.cs` | Declarative catalog of screens and bindings |
+| `UaCourse.Web/Services/UaConnection.cs` | Shared session, monitored items, events, retry and commands |
+| `UaCourse.Web/Components/Synoptic.razor` | Background and percentage labels, quality and timestamp |
+| `UaCourse.Web/Components/Pages/Home.razor` | Neutral index and dashboard links generated from the catalog |
+| `UaCourse.Web/Components/Layout/MainLayout.razor` | UA Lab template and shared navigation generated from the catalog |
+| `UaCourse.Web/Components/Pages/Dashboard.razor` | Route-based selection, commands, results and circuit lifecycle |
 
-La web app referenzia il progetto console per riusare configurazione e helper. È una semplificazione esplicita della prima versione; estrarre una libreria `UaCourse.Protocol` è il prossimo passo quando crescono i moduli. I confini sono già espressi da classi e namespace.
+The projects live under `src/OpcUaCourse/`. The web app references the console project to reuse configuration and helpers. This is an explicit simplification of the first version; extracting a `UaCourse.Protocol` library is the next step when the modules grow. The boundaries are already expressed by classes and namespaces.
 
-## Navigazione e template
+## Navigation and template
 
-La home (`/` e `/dashboards`) usa rendering statico; `/dashboards/{ScreenId}` usa Interactive Server e risolve la schermata nel catalogo. Le rotte funzionano anche con accesso diretto e reload. Un ID sconosciuto produce una vista esplicita senza sinottico. `course.css` definisce il template locale senza dipendenze UI esterne. Aggiungere una schermata al catalogo aggiorna home e menu senza modificare le pagine. La sessione UA rimane un servizio condiviso dell'applicazione, attivo anche quando il browser mostra la home.
+The home page (`/` and `/dashboards`) uses static rendering; `/dashboards/{ScreenId}` uses Interactive Server and resolves the screen in the catalog. The routes also work with direct access and reload. An unknown ID produces an explicit view without a synoptic. `course.css` defines the local template with no external UI dependencies. Adding a screen to the catalog updates the home page and the menu without changing the pages. The UA session remains a shared service of the application, active even when the browser shows the home page.
 
-## Modello informativo
+## Information model
 
-Namespace applicativo stabile: `urn:uacourse:plant`. Il client risolve l'indice dalla NamespaceArray di ogni sessione; non assume `ns=2`.
+Stable application namespace: `urn:uacourse:plant`. The client resolves the index from the NamespaceArray of each session; it does not assume `ns=2`.
 
 ```text
 Objects
@@ -53,31 +53,31 @@ Objects
    │  ├─ Running: Boolean, read only
    │  ├─ Profile: Double[], read only
    │  ├─ Recipe: Range in ExtensionObject, read only
-   │  ├─ BatchRecipe: RecipeDataType custom, read only
+   │  ├─ BatchRecipe: custom RecipeDataType, read only
    │  ├─ LoadRecipe(Recipe: RecipeDataType) -> AcceptedRevision: UInt32
    │  ├─ Start() -> Accepted: Boolean
    │  ├─ Stop()
    │  └─ ApplyRecipe(Target: Double) -> Target: Double
    └─ WaterPlant (BaseObjectType)
-      └─ 20 segnali Double: portate, livelli, pressioni, totalizzatore
+      └─ 20 Double signals: flows, levels, pressures, totalizer
 ```
 
-`ReactorType` deriva da `BaseObjectType` e dichiara `Temperature` Mandatory; le altre proprietà sono estensioni da dichiarare nel contratto completo. `Recipe` conserva il Range standard della lezione 08. `BatchRecipe` usa RecipeDataType con Name, Revision, Target e Steps: StructureDefinition e HasEncoding sono pubblici. Encode/Decode sono manuali e coerenti con i metadati; DynamicClient verifica decoding senza RecipeData. LoadRecipe valida, conserva un clone e aggiorna il target, ma non esegue una sequenza temporizzata degli step. Il NodeSet2 esportato contiene tipo ed encoding, non l'intero address space versionato.
+`ReactorType` derives from `BaseObjectType` and declares `Temperature` as Mandatory; the other properties are extensions to be declared in the full contract. `Recipe` keeps the standard Range of lesson 08. `BatchRecipe` uses RecipeDataType with Name, Revision, Target and Steps: StructureDefinition and HasEncoding are public. Encode/Decode are manual and consistent with the metadata; DynamicClient verifies decoding without RecipeData. LoadRecipe validates, keeps a clone and updates the target, but does not run a timed sequence of the steps. The exported NodeSet2 contains the type and the encoding, not the whole versioned address space.
 
-Il reattore segue il setpoint con un primo ordine discreto. Le grandezze idriche oscillano sinteticamente; il totalizzatore cresce di 30.4 gal ogni 500 ms in marcia (circa 3650 GPM). Non c'è bilancio idraulico né controllo indipendente delle dieci pompe disegnate.
+The reactor follows the setpoint with a discrete first-order response. The water quantities oscillate synthetically; the totalizer grows by 30.4 gal every 500 ms while running (about 3650 GPM). There is no hydraulic balance and no independent control of the ten pumps in the drawing.
 
-## Concorrenza e lifecycle
+## Concurrency and lifecycle
 
-Il NodeManager protegge aggiornamenti e metodi con il suo Lock. Lo SDK gestisce le operazioni sui nodi. I callback notificano i cambi tramite `ClearChangeMasks`.
+The NodeManager protects updates and methods with its Lock. The SDK handles the operations on the nodes. The callbacks notify changes through `ClearChangeMasks`.
 
-`UaConnection` è singleton e hosted service. Crea una subscription condivisa per tutti i circuiti: numero di sessioni indipendente dal numero di browser. Gli snapshot usano ConcurrentDictionary; gli eventi una coda limitata a 50 elementi. Un SemaphoreSlim serializza comandi e teardown. Nessun callback UA invoca direttamente il renderer Blazor.
+`UaConnection` is a singleton and a hosted service. It creates one subscription shared by all circuits: the number of sessions is independent of the number of browsers. Snapshots use a ConcurrentDictionary; events use a queue limited to 50 items. A SemaphoreSlim serializes commands and teardown. No UA callback calls the Blazor renderer directly.
 
-Al KeepAlive fallito il servizio chiude la sessione, svuota lo snapshot e ricrea sessione e subscription dopo 3 secondi. Non trasferisce subscription: tra le sessioni è possibile perdere eventi. Il circuito cancella il proprio timer alla DisposeAsync. La UI disabilita i comandi quando offline e mostra `—` senza spacciare l'ultimo valore per un dato valido.
+On a failed KeepAlive the service closes the session, empties the snapshot and recreates session and subscription after 3 seconds. It does not transfer subscriptions: events can be lost between sessions. The circuit cancels its own timer in DisposeAsync. The UI disables the commands when offline and shows `—`, without passing the last value off as valid data.
 
-## Sicurezza e confini
+## Security and boundaries
 
-Il canale UA usa Basic256Sha256/SignAndEncrypt. I certificati locali vengono generati sotto `.artifacts/pki`; è accettato solo il DER esatto del peer presente nella cartella dell'altra applicazione, e solo per BadCertificateUntrusted. Questa convenzione facilita il laboratorio sulla stessa macchina e non sostituisce la gestione delle trust list.
+The UA channel uses Basic256Sha256/SignAndEncrypt. Local certificates are generated under `<artifacts root>/pki`; only the exact DER of the peer found in the other application's folder is accepted, and only for BadCertificateUntrusted. This convention makes the lab easy on a single machine and does not replace the management of trust lists.
 
-L'identità utente è Anonymous; cifratura del canale e autorizzazione utente sono temi distinti. La web app non implementa autenticazione e tutti i browser condividono l'identità UA. Usare su localhost per questo laboratorio. HTTPS, utenti, ruoli e autorizzazioni per circuito sono sviluppo futuro, non funzionalità implicite.
+The user identity is Anonymous; channel encryption and user authorization are separate topics. The web app implements no authentication and all browsers share the UA identity. Use it on localhost for this lab. HTTPS, users, roles and per-circuit authorization are future development, not implicit features.
 
-Le chiavi ASP.NET DataProtection del laboratorio sono salvate in `.artifacts/aspnet-keys`, isolando il progetto dallo store del profilo Windows. Lo store locale non configura cifratura delle chiavi a riposo: per hosting operativo serve protezione esplicita e per più istanze uno store condiviso. Il logging va alla console, senza dipendenza dal Windows Event Log. La root del repository viene individuata risalendo dalla directory dell'assembly alla solution, così console e web condividono lo stesso PKI; fuori dal repository si usa la working directory.
+The lab's ASP.NET DataProtection keys are saved in `<artifacts root>/aspnet-keys`, isolating the project from the Windows profile store. The local store does not configure encryption of the keys at rest: for operational hosting explicit protection is needed, and a shared store for multiple instances. Logging goes to the console, with no dependency on the Windows Event Log. The artifacts root is `UACOURSE_ARTIFACTS_ROOT` or, by default, `%LOCALAPPDATA%\UaCourse`, so that console and web share the same PKI regardless of the working directory and nothing, private keys included, is ever written inside the repository.
