@@ -10,7 +10,7 @@ Opc.Ua.EncodeableFactory.GlobalFactory.AddEncodeableType(typeof(UaCourse.Models.
 builder.WebHost.UseStaticWebAssets();
 // Store del laboratorio isolato dal profilo Windows e dagli altri progetti.
 builder.Services.AddDataProtection().PersistKeysToFileSystem(
-    new DirectoryInfo(Path.Combine(UaCourse.Configuration.WorkspaceRoot, ".artifacts", "aspnet-keys")));
+    new DirectoryInfo(Path.Combine(UaCourse.Configuration.ArtifactsRoot, "aspnet-keys")));
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Services.AddSingleton<ScreenCatalog>();

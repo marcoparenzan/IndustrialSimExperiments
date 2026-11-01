@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    Sim[PlantNodeManager: simulazione 500 ms] --> UA[StandardServer: UA TCP 4840]
+    Sim[PlantNodeManager: simulazione 500 ms] --> UA[StandardServer: UA TCP 4841]
     UA -->|Publish: DataValue ed EventFieldList| Conn[UaConnection: sessione e subscription]
     Conn --> Cache[Snapshot thread safe e ultimi 50 eventi]
     Cache --> UI[Synoptic e Dashboard: Blazor Server]

@@ -6,7 +6,8 @@ const path = require('node:path');
   const browser = await chromium.launch({ headless: true });
   const errors = [];
   const results = [];
-  const folder = path.resolve('.artifacts/layout');
+  const artifactsRoot = process.env.UACOURSE_ARTIFACTS_ROOT || path.join(process.env.LOCALAPPDATA || require('node:os').tmpdir(), 'UaCourse');
+  const folder = path.join(artifactsRoot, 'layout');
   fs.mkdirSync(folder, { recursive: true });
   try {
     const page = await browser.newPage();

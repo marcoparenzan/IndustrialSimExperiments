@@ -20,7 +20,7 @@ In un secondo terminale, **sempre dalla stessa root**:
 dotnet run --project src/UaCourse.Web --no-launch-profile --urls http://localhost:5080
 ```
 
-Aprire http://localhost:5080. Endpoint UA: `opc.tcp://localhost:4840/UaCourse`. Arrestare con Ctrl+C. Il server e la web app sono processi separati, con due sessioni indipendenti se si avvia anche il client console.
+Aprire http://localhost:5080. Endpoint UA: `opc.tcp://localhost:4841/UaCourse`. Arrestare con Ctrl+C. Il server e la web app sono processi separati, con due sessioni indipendenti se si avvia anche il client console.
 
 La home è un indice neutro delle dashboard, con anteprime statiche e link. Il nuovo template UA Lab usa una sidebar scura, pannelli chiari e navigazione compatta su mobile. Le dashboard hanno URL dedicati: [impianto idrico](http://localhost:5080/dashboards/water) e [reattore e ricette](http://localhost:5080/dashboards/reactor). Il catalogo genera automaticamente sia le schede della home sia i link della navigazione.
 
@@ -32,7 +32,7 @@ Il percorso distingue laboratori eseguibili e approfondimenti progettuali. Sono 
 
 ## Verifica automatica
 
-Con nessun server attivo sulla porta 4840:
+Con nessun server attivo sulla porta 4841:
 
 ```powershell
 dotnet run --project src/UaCourse -- verify

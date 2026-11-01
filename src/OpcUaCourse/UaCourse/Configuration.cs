@@ -4,24 +4,25 @@ namespace UaCourse;
 
 public static class Configuration
 {
-    public const string Endpoint = "opc.tcp://localhost:4840/UaCourse";
-    public static string WorkspaceRoot
+    // Port 4841: ForgeSimApp's own OPC UA server listens on 4840, so both can run side by side.
+    public const string Endpoint = "opc.tcp://localhost:4841/UaCourse";
+
+    /// <summary>Where certificates (including private keys), the exported NodeSet2 and the ASP.NET data-protection keys are written.
+    /// Never inside the repository: set UACOURSE_ARTIFACTS_ROOT, or the default %LOCALAPPDATA%\UaCourse is used.</summary>
+    public static string ArtifactsRoot
     {
         get
         {
-            var directory = new DirectoryInfo(AppContext.BaseDirectory);
-            while (directory is not null)
-            {
-                if (File.Exists(Path.Combine(directory.FullName, "OpcUaExperiments.slnx"))) return directory.FullName;
-                directory = directory.Parent;
-            }
-            return Environment.CurrentDirectory;
+            var configured = Environment.GetEnvironmentVariable("UACOURSE_ARTIFACTS_ROOT");
+            return string.IsNullOrWhiteSpace(configured)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UaCourse")
+                : configured;
         }
     }
     public static async Task<ApplicationInstance> CreateAsync(bool server)
     {
         var name = server ? "UaCourse.Server" : "UaCourse.Client";
-        var pki = Path.Combine(WorkspaceRoot, ".artifacts", "pki", name);
+        var pki = Path.Combine(ArtifactsRoot, "pki", name);
         var config = new ApplicationConfiguration
         {
             ApplicationName = name, ApplicationUri = $"urn:{System.Net.Dns.GetHostName()}:{name}",
@@ -53,7 +54,7 @@ public static class Configuration
         {
             if (e.Error.StatusCode != StatusCodes.BadCertificateUntrusted) return;
             var peerName = server ? "UaCourse.Client" : "UaCourse.Server";
-            var peerStore = Path.Combine(WorkspaceRoot, ".artifacts", "pki", peerName, "own", "certs");
+            var peerStore = Path.Combine(ArtifactsRoot, "pki", peerName, "own", "certs");
             if (Directory.Exists(peerStore))
                 e.Accept = Directory.EnumerateFiles(peerStore, "*.der")
                     .Any(file => File.ReadAllBytes(file).AsSpan().SequenceEqual(e.Certificate.RawData));

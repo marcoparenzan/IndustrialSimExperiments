@@ -53,7 +53,7 @@ Pubblicare `Line2.Speed` nel NodeManager, aggiungere la voce alla proprietà Scr
 
 | Sintomo | Verifica |
 |---|---|
-| Connessione continuamente offline | Server avviato? Porta 4840 libera? Log della web app? |
+| Connessione continuamente offline | Server avviato? Porta 4841 libera? Log della web app? |
 | BadCertificateUntrusted | Processi avviati dalla stessa root? Store `.artifacts/pki` di entrambi presenti? |
 | BadCertificateHostNameInvalid | Usare localhost come nei comandi; il sample non gestisce host remoti |
 | BadNodeIdUnknown | Nome nodo e namespace del catalogo corrispondono al server? |

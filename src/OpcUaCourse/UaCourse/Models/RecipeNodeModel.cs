@@ -59,7 +59,7 @@ internal sealed partial class PlantNodeManager
         var nodeSet = new Opc.Ua.Export.UANodeSet();
         nodeSet.Export(SystemContext, type, true);
         nodeSet.Export(SystemContext, encoding, true);
-        var directory = Path.Combine(Configuration.WorkspaceRoot, ".artifacts", "models");
+        var directory = Path.Combine(Configuration.ArtifactsRoot, "models");
         Directory.CreateDirectory(directory);
         using var stream = File.Create(Path.Combine(directory, "Recipe.NodeSet2.xml"));
         nodeSet.Write(stream);
