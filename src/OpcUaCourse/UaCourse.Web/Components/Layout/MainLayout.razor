@@ -1,0 +1,26 @@
+﻿@inherits LayoutComponentBase
+
+@using UaCourse.Web.Modules
+@inject ScreenCatalog Catalog
+
+<div class="app-frame">
+    <aside class="app-sidebar">
+        <a class="brand" href="/">UA<span>LAB</span><small>C# · OPC UA</small></a>
+        <p class="nav-caption">LABS</p>
+        <nav class="sidebar-nav" aria-label="Main navigation">
+            <NavLink href="/" Match="NavLinkMatch.All">Home</NavLink>
+            @foreach (var screen in Catalog.Screens)
+            {
+                <NavLink href="@($"/dashboards/{screen.Id}")">@screen.Title</NavLink>
+            }
+        </nav>
+        <p class="sidebar-note">Explore the model.<br />Watch the process.<br />Try the commands.</p>
+    </aside>
+    <main class="course-shell">@Body</main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An error occurred in the application.
+    <a href="." class="reload">Reload</a>
+    <button type="button" class="dismiss" aria-label="Dismiss the error message">×</button>
+</div>

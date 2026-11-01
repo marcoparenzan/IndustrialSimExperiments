@@ -1,0 +1,99 @@
+@page "/dashboards/{ScreenId}"
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+@using UaCourse.Web.Modules
+@using UaCourse.Web.Services
+@inject ScreenCatalog Catalog
+@inject UaConnection Connection
+@inject SignalSources Sources
+
+<PageTitle>@(selected?.Title ?? "Dashboard not found") · UA Lab</PageTitle>
+@if (selected is null)
+{
+    <header class="directory-header"><h1>Dashboard not found</h1><p>The requested screen is not in the catalog.</p><a href="/">Back to home</a></header>
+}
+else
+{
+<header class="course-header">
+    <div><a class="breadcrumb" href="/">Labs /</a><h1>@selected.Title</h1><p>@selected.Description</p></div>
+    <span class="connection @(Sources.For(selected).Connected ? "online" : "offline")">@Sources.For(selected).Status</span>
+</header>
+<div class="workspace">
+    <section class="canvas-panel"><h2>@selected.Title</h2><p>@selected.Description</p><p class="canvas-help">On small screens scroll the diagram horizontally to keep the values readable.</p><Synoptic Screen="selected" Busy="@(busy || !interactive)" CommandRequested="RunScreenCommand" /></section>
+    @if (selected.Source == ScreenSources.Course)
+    {
+    <aside class="control-panel">
+        <p class="eyebrow">MODEL / REACTOR1</p><h2>Commands and recipes</h2>
+        <p>The reactor controls the simulated run state and the water plant totalizer.</p>
+        <div class="button-row"><button disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("Start"))'>Start</button><button class="secondary" disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("Stop"))'>Stop</button></div>
+        <label for="target">Process target (20–90 °C)</label>
+        <input id="target" type="number" min="20" max="90" step="0.5" @bind="target" />
+        <button disabled="@Disabled" @onclick="() => Execute(() => Connection.WriteAsync(target))">Write setpoint · Write</button>
+        <button class="secondary" disabled="@Disabled" @onclick='() => Execute(() => Connection.CallAsync("ApplyRecipe", target))'>Apply recipe · Call</button>
+        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(Connection.RecipeAsync)">Read structure and array</button>
+        <label for="recipe-name">Structured recipe name</label>
+        <input id="recipe-name" maxlength="128" @bind="recipeName" />
+        <label for="recipe-revision">Revision</label>
+        <input id="recipe-revision" type="number" min="1" @bind="recipeRevision" />
+        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(() => Connection.LoadBatchRecipeAsync(recipeName, recipeRevision, target))">Load RecipeDataType · Call</button>
+        <button class="secondary" disabled="@Disabled" @onclick="() => Execute(Connection.BatchRecipeAsync)">Read custom recipe</button>
+        <output aria-live="polite" class="command-result">@result</output>
+        <p class="fine-print">Labels come from OPC UA MonitoredItems. Hover over a value to see NodeId, quality and timestamp.</p>
+    </aside>
+    }
+    else
+    {
+    <aside class="control-panel">
+        <p class="eyebrow">READ ONLY / FORGESIMAPP</p><h2>Live data</h2>
+        <p>This screen shows tags published by ForgeSimApp. They are read-only: the simulator accepts no writes or commands over OPC UA.</p>
+        <p class="fine-print">Start the simulator with <code>dotnet run --project src/ForgeSimApp -- --protocols OpcUa</code>. Hover over a value to see the tag path, quality and timestamp. See lesson 19.</p>
+    </aside>
+    }
+</div>
+@if (selected.Source == ScreenSources.Course)
+{
+<section class="event-panel"><h2>Process events <span>BaseEventType / Publish</span></h2>
+    @if (Connection.Events.Count == 0) { <p>Waiting for OPC UA events…</p> }
+    @foreach (var ev in Connection.Events.Reverse().Take(8)) { <div class="event-row">@ev</div> }
+</section>
+}
+}
+
+@code {
+    [Parameter] public string ScreenId { get; set; } = "";
+    private ScreenDefinition? selected;
+    private double target = 65;
+    private string recipeName = "Blazor recipe";
+    private uint recipeRevision = 1;
+    private string result = "Select a command to see the UA response.";
+    private bool busy;
+    private bool interactive;
+    private bool Disabled => !interactive || busy || !Connection.Connected;
+    private readonly CancellationTokenSource stop = new();
+    private Task? refresh;
+    protected override void OnInitialized() { refresh = RefreshAsync(); }
+    protected override void OnParametersSet()
+    {
+        selected = Catalog.Screens.FirstOrDefault(screen => screen.Id == ScreenId);
+        result = "Select a command to see the UA response.";
+    }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender) { interactive = true; StateHasChanged(); }
+    }
+    private async Task RefreshAsync()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+        try { while (await timer.WaitForNextTickAsync(stop.Token)) await InvokeAsync(StateHasChanged); }
+        catch (OperationCanceledException) { }
+    }
+    private async Task Execute(Func<Task<string>> operation)
+    {
+        busy = true;
+        try { result = await operation(); }
+        catch (Exception ex) { result = $"Command failed: {ex.Message}"; }
+        finally { busy = false; }
+    }
+    private Task RunScreenCommand(ScreenCommand command) => Execute(() => Connection.CallAsync(command.Method));
+    public async ValueTask DisposeAsync() { stop.Cancel(); if (refresh is not null) await refresh; stop.Dispose(); }
+}

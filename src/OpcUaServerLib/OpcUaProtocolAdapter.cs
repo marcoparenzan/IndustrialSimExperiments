@@ -96,8 +96,7 @@ public sealed class OpcUaProtocolAdapter(string endpointUrl) : IProtocolAdapter
             UserAccessLevel = AccessLevels.CurrentRead,
             Value = tag.Value
         };
-        parent.AddReference(ReferenceTypeIds.Organizes, false, node.NodeId);
-        parent.AddChild(node);
+        parent.AddChild(node);   // the aggregated child already yields the Organizes reference (an explicit AddReference would list it twice)
         return node;
     }
 

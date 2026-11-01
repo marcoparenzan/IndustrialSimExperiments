@@ -11,4 +11,6 @@ public sealed class ConveyorOptions
     public double GearRatio { get; set; } = 12;
     public double MechanicalEfficiency { get; set; } = 0.9;
     public double RollingCoefficient { get; set; } = 0.03;
+    public double VfdDecelHzPerSecond { get; set; } = 10;      // VFD deceleration ramp
+    public double VfdBrakingResistorOhms { get; set; } = 0;    // 0 = no braking resistor
 }

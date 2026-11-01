@@ -15,5 +15,17 @@ public class VfdSettings
     public double AmbientTemp { get; set; } = 25.0;     // °C
     public double OverCurrentMultiple { get; set; } = 1.6; // I_trip = multiple * MaxCurrent
     public double UnderVoltPUNomDC { get; set; } = 0.55;   // trip if Vdc < 0.55 * Vdc_nom
+    public double BusFullLoadFactor { get; set; } = 1.35; // Vdc / V_LL at full load (six-pulse diode bridge average); at no load Vdc = sqrt(2) * V_LL
+    public double DcLinkCapacitanceF { get; set; } = 2.0e-3;   // F, energy storage that regenerated power charges
+    public double BrakingResistorOhms { get; set; } = 0.0;     // ohm, 0 = no braking resistor fitted (no brake chopper)
+    public double BrakeChopperOnPU { get; set; } = 1.15;       // chopper switches on above this multiple of VdcNom
+    public double BrakeChopperOffPU { get; set; } = 1.10;      // ... and off again below this one (hysteresis)
+    public double BusDischargeTimeConstant { get; set; } = 0.1; // s, bleed of excess bus energy through inverter/motor losses
+    // Control terminals (only used with ControlSource = Terminals)
+    public VfdControlSource ControlSource { get; set; } = VfdControlSource.Setpoint;
+    public VfdAnalogInputMode AnalogMode { get; set; } = VfdAnalogInputMode.Voltage0To10;
+    public double MaxOutputFrequency { get; set; } = 50.0;     // Hz at full-scale analog reference and analog output
+    // Multi-step speeds selected by the binary code of MultiStep1 (bit 0), MultiStep2 (bit 1), MultiStep3 (bit 2): code 1..7 -> index 0..6
+    public double[] MultiStepFrequencies { get; set; } = [10.0, 20.0, 30.0, 40.0, 45.0, 50.0, 50.0];
     public double OverVoltPUNomDC { get; set; } = 1.20;   // trip if Vdc > 1.20 * Vdc_nom
 }

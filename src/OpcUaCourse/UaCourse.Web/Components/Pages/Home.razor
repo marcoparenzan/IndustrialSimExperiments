@@ -1,0 +1,21 @@
+@page "/"
+@page "/dashboards"
+@using UaCourse.Web.Modules
+@inject ScreenCatalog Catalog
+
+<PageTitle>Home · UA Lab</PageTitle>
+<header class="directory-header">
+    <p class="eyebrow">OPC UA COURSE IN C#</p>
+    <h1>OPC UA Labs</h1>
+    <p>Pick a dashboard to explore the simulator's signals, methods and information models.</p>
+</header>
+<div class="directory-heading"><h2>Available dashboards</h2><span>@Catalog.Screens.Count screens</span></div>
+<section class="dashboard-directory" aria-label="Available dashboards">
+    @foreach (var screen in Catalog.Screens)
+    {
+        <a class="dashboard-card" href="@($"/dashboards/{screen.Id}")">
+            <div class="card-preview"><img src="@screen.Background" alt="" /></div>
+            <div class="card-content"><p class="eyebrow">SIMULATOR / @screen.Id.ToUpperInvariant()</p><h2>@screen.Title</h2><p>@screen.Description</p><span class="card-action">Open dashboard →</span></div>
+        </a>
+    }
+</section>

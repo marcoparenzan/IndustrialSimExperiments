@@ -1,8 +1,8 @@
 # IndustrialSimExperiments
 
-Modular industrial-process simulation platform targeting .NET 10 / C# 13. A configurable **machine module** (e.g. a conveyor) is stepped in real time and exposed over one or more pluggable **protocol adapters** (OPC UA, MQTT, a live console dashboard), driven by a [Spectre.Console.Cli](https://spectreconsole.net/cli/) command-line interface, so simulated processes can be browsed and polled with off-the-shelf industrial tooling.
+Modular industrial-process simulation platform targeting .NET 11. A configurable **machine module** (e.g. a conveyor) is stepped in real time and exposed over one or more pluggable **protocol adapters** (OPC UA, MQTT, a live console dashboard), driven by a [Spectre.Console.Cli](https://spectreconsole.net/cli/) command-line interface, so simulated processes can be browsed and polled with off-the-shelf industrial tooling.
 
-Requires the .NET 10 SDK. NuGet: `OPCFoundation.NetStandard.Opc.Ua` for the OPC UA server, `MQTTnet` + `MQTTnet.Server` for the MQTT broker, `Spectre.Console.Cli` for the command-line interface, `Spectre.Console` for the live dashboard.
+Requires the .NET 11 SDK. NuGet: `OPCFoundation.NetStandard.Opc.Ua` for the OPC UA server, `MQTTnet` + `MQTTnet.Server` for the MQTT broker, `Spectre.Console.Cli` for the command-line interface, `Spectre.Console` for the live dashboard, `PySharp.Interpreter` for the Conveyor's Python-scripted variant (see [CONVEYOR.md](CONVEYOR.md)).
 
 ## Solution map
 
@@ -14,7 +14,9 @@ src/
   PackageSimLib/              Conveyor package model
   ThreePhaseSupplySimLib/    Grid supply device model
   VfdSimLib/                 VFD (drive) device model
-  ConveyorSimLib/            ConveyorMachine: an IMachineModule built from the device models above
+  ConveyorSimLib/            Two IMachineModule implementations: ConveyorMachine (C#, built from
+                              the device models above) and ConveyorPySharpMachine (same physics,
+                              ported to Python, run via PySharp.Interpreter) — see CONVEYOR.md
   OpcUaServerLib/            OpcUaProtocolAdapter: an IProtocolAdapter that publishes any
                               IMachineModule's tags as an OPC UA address space
   MqttServerLib/             MqttProtocolAdapter: an IProtocolAdapter that hosts an embedded
@@ -24,10 +26,14 @@ src/
                               any IMachineModule's tags as a live-updating Spectre.Console table
   ForgeSimApp/               Spectre.Console.Cli host wiring one machine module to one or more
                               protocol adapters, driven by CLI options + appsettings.json
-  IndustrialSim.Tests/       xUnit tests for the core, device models, and ConveyorMachine
+  IndustrialSim.Tests/       xUnit tests for the core, the device models (DC bus, regeneration, control
+                              terminals), the Conveyor and the C#/Python parity of the two conveyors
+  ForgeDataGateway*/         OPC UA to MQTT data gateway (see below)
+  OpcUaCourse/               The OPC UA course: UaCourse (server + console labs), UaCourse.Web (Blazor),
+                              UaCourse.DynamicClient — see docs/opcua-course/README.md
 ```
 
-The Visual Studio solution (`IndustrialSimLib.slnx`) groups these into `/Core`, `/Devices`, `/Machines`, `/Protocols`, `/Applications`, `/Tests` folders.
+The Visual Studio solution (`ForgeIndustrial.slnx`) groups these into `/Core`, `/Devices`, `/Machines`, `/Protocols`, `/Applications`, `/OpcUaCourse`, `/ForgeDataGateway/...` and `/Tests` folders. The architecture map is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Design: modular machines and protocols
 
@@ -74,28 +80,23 @@ Three-phase supply (`ThreePhaseSupplySimLib`)
 - Settings: `NominalVoltageLL`, `NominalFrequency`, slew rates, `UnderVoltPU`/`OverVoltPU`.
 - Behavior: slews outputs toward targets; anomalies (`UnderVoltage`, `OverVoltage`, `FrequencyDrift`) perturb the setpoints.
 
-VFD (`VfdSimLib`)
+VFD (`VfdSimLib`) — concepts, I/O and a model-coverage table in [docs/vfd/VFD.md](docs/vfd/VFD.md); supply-side protection in [docs/vfd/SUPPLY-PROTECTION.md](docs/vfd/SUPPLY-PROTECTION.md)
 
 - Settings: rated voltage/frequency, accel/decel, boost, max current, thermal constants, trip thresholds.
-- Behavior: ramps output frequency to target with V/f + boost; models bus voltage, heatsink thermal RC, and trips on under/over-voltage, over-current, over-temp, phase loss, ground fault.
+- Behavior: ramps output frequency to target with V/f + boost; a DC bus that sags from the no-load peak towards the six-pulse average as the motor loads it; regenerated power that charges the DC link (trip on overvoltage, or a brake chopper and resistor when fitted); heatsink thermal RC; trips on under/over-voltage, over-current, over-temp, phase loss, ground fault. Optional control terminals (run, multi-step speeds, 0-10 V / 4-20 mA reference, fault reset) and output relays/analog output. Concepts and the full coverage table: [docs/vfd/VFD.md](docs/vfd/VFD.md).
 
 Induction motor (`InductionMotorLib`)
 
 - Settings: rated voltage/frequency/power/speed, inertia, friction, slip, torque/current limits, load torque.
-- Behavior: synchronous speed from pole pairs and frequency, slip-based torque, speed dynamics from net torque and inertia, phase current from torque and V/f margin. Anomalies: phase loss, load jam, bearing wear, sensor noise.
+- Behavior: synchronous speed from pole pairs and frequency, slip-based torque (negative torque and shaft power when the rotor runs faster than the field, i.e. regeneration), speed dynamics from net torque and inertia (integrated semi-implicitly), phase current from torque and V/f margin. Anomalies: phase loss, load jam, bearing wear, sensor noise.
 
 Package (`PackageSimLib`)
 
 - A simple mass (0.5–20 kg) with a position, spawned and moved by the machine that owns it.
 
-## ConveyorMachine (ConveyorSimLib)
+## Conveyor (ConveyorSimLib)
 
-An `IMachineModule` composed of a shared `ThreePhaseSupply` feeding N identical segments (each its own VFD + induction motor), plus packages that spawn periodically and travel the belt:
-
-- Mechanicals per segment: `GearRatio`, `PulleyRadiusMeters`, `MechanicalEfficiency`, `RollingCoefficient`.
-- Each tick: steps the supply, then per segment feeds supply → VFD → motor → VFD feedback, adds package load torque reflected through the gear ratio, and advances package positions by belt speed.
-- Configurable via `ConveyorOptions` (segment count, length, target frequency, package spawn period/mass, mechanicals) — bound from `Machines:Conveyor` in configuration.
-- Exposes tags under `Supply.*`, `Packages.*`, and `Segments.Segment{i}.Vfd.*` / `Segments.Segment{i}.Motor.*`.
+The default `IMachineModule`: a shared `ThreePhaseSupply` feeding N identical segments (each its own VFD + induction motor), plus packages that spawn periodically and travel the belt. Ships as **two** interchangeable implementations selected via `Simulation:Machine`/`--machine` — `ConveyorMachine` (`Conveyor`, C# device libs) and `ConveyorPySharpMachine` (`ConveyorPySharp`, the current default — same physics ported to Python and run via `PySharp.Interpreter`), both exposing identical tags/config. See **[CONVEYOR.md](CONVEYOR.md)** for the full architecture, physics, tick-by-tick signal flow, configuration reference, and exposed tags.
 
 ## Running ForgeSimApp
 
@@ -158,7 +159,22 @@ Subscribe with any MQTT client (e.g. `mosquitto_sub`, MQTT Explorer) to `ForgeSi
 
 ## ForgeDataGateway
 
-A separate application in this same repo (`ForgeDataGatewayCore`/`ForgeDataGatewayApp`/`ForgeDataGatewayCli`, under `/ForgeDataGateway/*` in `IndustrialSimLib.slnx`): an edge-collector that polls OPC UA (Modbus/S7 are documented extension points), buffers samples in an in-memory queue, and republishes them to MQTT as a Unified Namespace. It has a Blazor Server UI (Tailwind CSS) for configuring sources/tags with OPC UA address-space browsing, and a Spectre.Console.Cli host for running headless — both share the same protocol-agnostic core. Point it at `ForgeSimApp`'s OPC UA server for a full local demo. See [FORGE-DATA-GATEWAY.md](FORGE-DATA-GATEWAY.md).
+A separate application in this same repo (`ForgeDataGatewayCore`/`ForgeDataGatewayApp`/`ForgeDataGatewayCli`, under `/ForgeDataGateway/*` in `ForgeIndustrial.slnx`): an edge-collector that polls OPC UA (Modbus/S7 are documented extension points), buffers samples in an in-memory queue, and republishes them to MQTT as a Unified Namespace. It has a Blazor Server UI (Tailwind CSS) for configuring sources/tags with OPC UA address-space browsing, and a Spectre.Console.Cli host for running headless — both share the same protocol-agnostic core. Point it at `ForgeSimApp`'s OPC UA server for a full local demo. See [FORGE-DATA-GATEWAY.md](FORGE-DATA-GATEWAY.md).
+
+## OPC UA course
+
+`src/OpcUaCourse` and `docs/opcua-course` hold an 19-lesson course on OPC UA in C# (in English), with its own server (port 4841), 13 automatic labs, a Blazor web app and a dashboard that shows the live VFD of a `ForgeSimApp` conveyor. Start at [docs/opcua-course/README.md](docs/opcua-course/README.md). Lesson 19 compares ForgeSim's generic OPC UA mapping with a modelled server.
+
+## Documentation
+
+| Document | Content |
+|---|---|
+| [docs/USAGE.md](docs/USAGE.md) | Installation first, ports, how to run everything, where files go, troubleshooting |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Solution map, data flow, the rules that hold the pieces together |
+| [docs/vfd/VFD.md](docs/vfd/VFD.md) | VFD concepts, wiring and I/O, and what the simulator models |
+| [docs/vfd/SUPPLY-PROTECTION.md](docs/vfd/SUPPLY-PROTECTION.md) | Transformer and supply protection compared with the supply model |
+| [CONVEYOR.md](CONVEYOR.md), [EXTENDING.md](EXTENDING.md), [FORGE-DATA-GATEWAY.md](FORGE-DATA-GATEWAY.md) | The Conveyor, how to extend, the data gateway |
+| [docs/ROADMAP.md](docs/ROADMAP.md), [docs/OPENPOINTS.md](docs/OPENPOINTS.md) | Ideas, decisions to confirm, known gaps and what was not verified |
 
 ## Extending with new devices, machines, or protocols
 
@@ -167,18 +183,18 @@ See [EXTENDING.md](EXTENDING.md) for how to add a new device (a `Settings`/`Stat
 ## Tests
 
 ```bash
-dotnet test src/IndustrialSimLib.slnx
+dotnet test src/ForgeIndustrial.slnx
 ```
 
-Covers `Bindable` semantics, timed events, VFD ramp/trip behavior, motor acceleration/current, package defaults, and end-to-end `ConveyorMachine` stepping (including that every exposed tag has a value).
+Covers `Bindable` semantics, timed events, VFD ramp/trip behavior, the load-dependent DC bus, regeneration with and without a braking resistor, the VFD control terminals, motor acceleration/current and regeneration, package defaults, end-to-end `ConveyorMachine` stepping (including that every exposed tag has a value), and **parity tests** that step the C# and the Python conveyor identically and compare every tag, also during a stop that makes the motors regenerate.
 
 ## Build
 
 ```bash
-dotnet build src/IndustrialSimLib.slnx
+dotnet build src/ForgeIndustrial.slnx
 ```
 
-Requires the .NET 10 SDK. Restores `OPCFoundation.NetStandard.Opc.Ua` for `OpcUaServerLib`, `MQTTnet`/`MQTTnet.Server` for `MqttServerLib`, `Spectre.Console` for `ConsoleDashboardLib`, and `Spectre.Console.Cli` for `ForgeSimApp`.
+Requires the .NET 11 SDK. Restores `OPCFoundation.NetStandard.Opc.Ua` for `OpcUaServerLib`, `MQTTnet`/`MQTTnet.Server` for `MqttServerLib`, `Spectre.Console` for `ConsoleDashboardLib`, `Spectre.Console.Cli` for `ForgeSimApp`, and `PySharp.Interpreter` for `ConveyorSimLib`'s `ConveyorPySharpMachine`.
 
 ## Safety
 
@@ -186,4 +202,4 @@ These are simplified models for simulation and education; do not use as-is for s
 
 ## License
 
-See repository license (if provided).
+MIT, see [LICENSE.txt](LICENSE.txt).

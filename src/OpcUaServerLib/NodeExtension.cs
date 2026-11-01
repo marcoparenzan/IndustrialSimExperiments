@@ -150,8 +150,7 @@ public static class NodeExtension
             BrowseName = new QualifiedName(name, parent.BrowseName.NamespaceIndex),
             DisplayName = name,
         };
-        parent.AddReference(ReferenceTypeIds.Organizes, false, folder.NodeId);
-        parent.AddChild(folder); // make it an aggregated child so FindChild works
+        parent.AddChild(folder); // the aggregated child already yields the Organizes reference; adding it explicitly too would list the node twice in Browse
         return folder;
     }
 }

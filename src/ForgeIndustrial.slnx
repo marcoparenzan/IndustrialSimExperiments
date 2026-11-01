@@ -23,6 +23,11 @@
     <Project Path="ForgeDataGatewayTests/ForgeDataGatewayTests.csproj" />
     <Project Path="IndustrialSim.Tests/IndustrialSim.Tests/IndustrialSim.Tests.csproj" />
   </Folder>
+  <Folder Name="/OpcUaCourse/">
+    <Project Path="OpcUaCourse/UaCourse/UaCourse.csproj" />
+    <Project Path="OpcUaCourse/UaCourse.Web/UaCourse.Web.csproj" />
+    <Project Path="OpcUaCourse/UaCourse.DynamicClient/UaCourse.DynamicClient.csproj" />
+  </Folder>
   <Folder Name="/ForgeDataGateway/Core/">
     <Project Path="ForgeDataGatewayCore/ForgeDataGatewayCore.csproj" />
   </Folder>

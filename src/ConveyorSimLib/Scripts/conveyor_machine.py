@@ -21,7 +21,8 @@ _state = None
 
 
 def init(segment_count, length_m, target_freq_hz, spawn_period_s, package_mass_kg,
-         pulley_radius_m, gear_ratio, mech_efficiency, rolling_coeff):
+         pulley_radius_m, gear_ratio, mech_efficiency, rolling_coeff,
+         vfd_decel_hz_per_s=10.0, vfd_braking_resistor_ohms=0.0):
     global _state
 
     supply_rated_ll = 400.0
@@ -42,6 +43,15 @@ def init(segment_count, length_m, target_freq_hz, spawn_period_s, package_mass_k
             "vfd": {
                 "target_freq": target_freq_hz,
                 "bus_v": math.sqrt(2.0) * supply_rated_ll,
+                "vdc_nom": math.sqrt(2.0) * supply_rated_ll,
+                "_motor_current_feedback": 0.0,
+                "_motor_power_feedback": 0.0,
+                "excess_energy_j": 0.0,
+                "chopper_active": False,
+                "braking_power_w": 0.0,
+                "fault_relay": False,
+                "running_relay": False,
+                "analog_out_frequency": 0.0,
                 "heatsink_temp": 25.0,
                 "out_freq": 0.0,
                 "out_v": 0.0,
@@ -52,6 +62,7 @@ def init(segment_count, length_m, target_freq_hz, spawn_period_s, package_mass_k
                 "trated": motor_trated,
                 "vrated": motor_vrated,
                 "phase_current": 0.0,
+                "shaft_power_w": 0.0,
             },
             "base_load_torque": 3.0,   # matches CreateSegment's `new InductionMotorSettings { ConstLoadTorque = 3 }`
             "const_load_torque": 3.0,
@@ -78,7 +89,7 @@ def init(segment_count, length_m, target_freq_hz, spawn_period_s, package_mass_k
             "vfd_rated_f": 50.0,
             "vfd_max_current": 30.0,
             "vfd_accel": 10.0,
-            "vfd_decel": 10.0,
+            "vfd_decel": vfd_decel_hz_per_s,
             "vfd_volt_boost": 0.07,
             "vfd_thermal_tc": 40.0,
             "vfd_max_heatsink_temp": 85.0,
@@ -86,6 +97,13 @@ def init(segment_count, length_m, target_freq_hz, spawn_period_s, package_mass_k
             "vfd_overcurrent_mult": 1.6,
             "vfd_undervolt_pu_dc": 0.55,
             "vfd_overvolt_pu_dc": 1.20,
+            "vfd_bus_full_load_factor": 1.35,
+            "vfd_dc_link_capacitance": 2.0e-3,
+            "vfd_braking_resistor_ohms": vfd_braking_resistor_ohms,
+            "vfd_brake_chopper_on_pu": 1.15,
+            "vfd_brake_chopper_off_pu": 1.10,
+            "vfd_bus_discharge_tc": 0.1,
+            "vfd_max_output_frequency": 50.0,
             # InductionMotorSettings defaults
             "motor_pole_pairs": 2,
             "motor_rated_f": 50.0,
@@ -152,12 +170,46 @@ def _vfd_thermal_step(vfd, opt, dt, conduction_loss_w):
     vfd["heatsink_temp"] += dT
 
 
+def _vfd_dc_link_step(vfd, opt, dt):
+    """Vfd.DcLinkStep: regenerated power charges the DC link, the brake chopper (if a resistor is fitted) burns it off."""
+    max_sub_step = 0.001
+    sub_steps = max(1, int(math.ceil(dt / max_sub_step)))
+    h = dt / sub_steps
+    bus_static = vfd["bus_v"]
+    vdc_nom = vfd["vdc_nom"]
+    cap = max(1e-9, opt["vfd_dc_link_capacitance"])
+    regen_w = max(0.0, -vfd["_motor_power_feedback"])
+    energy = vfd["excess_energy_j"]
+    brake_w = 0.0
+    for _ in range(sub_steps):
+        vdc = math.sqrt(bus_static * bus_static + 2.0 * energy / cap)
+        if opt["vfd_braking_resistor_ohms"] > 0:
+            if vdc > opt["vfd_brake_chopper_on_pu"] * vdc_nom:
+                vfd["chopper_active"] = True
+            elif vdc < opt["vfd_brake_chopper_off_pu"] * vdc_nom:
+                vfd["chopper_active"] = False
+        else:
+            vfd["chopper_active"] = False
+        brake_w = vdc * vdc / opt["vfd_braking_resistor_ohms"] if vfd["chopper_active"] else 0.0
+        energy = max(0.0, energy + (regen_w - brake_w - energy / max(1e-6, opt["vfd_bus_discharge_tc"])) * h)
+    vfd["excess_energy_j"] = energy
+    vfd["braking_power_w"] = brake_w
+    vfd["bus_v"] = math.sqrt(bus_static * bus_static + 2.0 * energy / cap)
+
+
+def _vfd_update_output_terminals(s, vfd, opt):
+    """Vfd.UpdateOutputTerminals: fault relay, running relay and the 0-10 V frequency output."""
+    vfd["fault_relay"] = s["active_trip"] is not None
+    vfd["running_relay"] = s["running"] and vfd["out_freq"] > 0
+    vfd["analog_out_frequency"] = 10.0 * min(1.0, max(0.0, vfd["out_freq"] / max(1e-6, opt["vfd_max_output_frequency"])))
+
+
 def _vfd_detect_trips(s, seg):
     opt = s["options"]
     vfd = seg["vfd"]
-    if vfd["bus_v"] < opt["vfd_undervolt_pu_dc"] * math.sqrt(2.0) * opt["vfd_rated_ll"]:
+    if vfd["bus_v"] < opt["vfd_undervolt_pu_dc"] * vfd["vdc_nom"]:
         _trip(s, "UnderVoltage")
-    if vfd["bus_v"] > opt["vfd_overvolt_pu_dc"] * math.sqrt(2.0) * opt["vfd_rated_ll"]:
+    if vfd["bus_v"] > opt["vfd_overvolt_pu_dc"] * vfd["vdc_nom"]:
         _trip(s, "OverVoltage")
     if vfd["_motor_current_feedback"] > opt["vfd_overcurrent_mult"] * opt["vfd_max_current"]:
         _trip(s, "OverCurrent")
@@ -173,7 +225,9 @@ def _step_segment(s, seg, dt, supply_v):
 
     # --- Vfd.Step ---
     base_ll = supply_v if supply_v > 0 else opt["vfd_rated_ll"]
-    vfd["bus_v"] = math.sqrt(2.0) * base_ll
+    # Bus voltage sags from the no-load peak (sqrt(2) * V_LL) towards the six-pulse average as the motor loads the DC link.
+    load_pu = min(1.0, max(0.0, vfd["_motor_current_feedback"] / max(1e-6, opt["vfd_max_current"])))
+    vfd["bus_v"] = base_ll * (math.sqrt(2.0) - (math.sqrt(2.0) - opt["vfd_bus_full_load_factor"]) * load_pu)
     # An_GroundFault is always False in this v1 scope.
 
     if not s["running"]:
@@ -213,22 +267,28 @@ def _step_segment(s, seg, dt, supply_v):
     if n_sync_rpm <= 1e-3:
         slip = 1.0
     else:
-        slip = max(0.0, (n_sync_rpm - motor["speed_rpm"]) / n_sync_rpm)
+        slip = (n_sync_rpm - motor["speed_rpm"]) / n_sync_rpm   # negative = generating / regenerating
+    slip_magnitude = abs(slip)
 
     vf_pu = (drive_voltage_cmd / max(10.0, motor["vrated"])) / (f / max(1.0, opt["motor_rated_f"]))
     vf_pu = min(1.2, max(0.0, vf_pu))
 
-    torque_pu = (vf_pu ** 2.0) * (slip / (slip + opt["motor_slip_nom"]))
-    elect_torque = torque_pu * motor["trated"]
-    elect_torque = min(opt["motor_torque_max_pu"] * motor["trated"],
-                        max(-opt["motor_torque_max_pu"] * motor["trated"], elect_torque))
+    torque_pu = (vf_pu ** 2.0) * _sign(slip) * (slip_magnitude / (slip_magnitude + opt["motor_slip_nom"]))
+    max_torque = opt["motor_torque_max_pu"] * motor["trated"]
+    elect_torque = min(max_torque, max(-max_torque, torque_pu * motor["trated"]))
 
     load_torque = (seg["const_load_torque"] +
                    opt["motor_visc_friction"] * abs(motor["speed_rpm"]) +
                    opt["motor_coulomb_friction"] * _sign(motor["speed_rpm"]))
     # An_LoadJam / An_BearingWear are always False in this v1 scope.
 
-    angular_acceleration = (elect_torque - load_torque) / max(1e-6, opt["motor_inertia"])
+    # Semi-implicit speed update (see InductionMotor.Step): linearise torque and viscous friction in speed.
+    rad_per_sec_per_rpm = 2.0 * math.pi / 60.0
+    stiffness = opt["motor_visc_friction"] / rad_per_sec_per_rpm   # Nm per rad/s
+    if abs(torque_pu * motor["trated"]) < max_torque:
+        stiffness += (motor["trated"] * vf_pu * vf_pu / n_sync_rpm * opt["motor_slip_nom"]
+                      / (slip_magnitude + opt["motor_slip_nom"]) ** 2 / rad_per_sec_per_rpm)
+    angular_acceleration = (elect_torque - load_torque) / max(1e-6, opt["motor_inertia"] + dt * stiffness)
     motor["speed_rpm"] += angular_acceleration * 60.0 / (2.0 * math.pi) * dt
     if motor["speed_rpm"] < 0 and drive_freq_cmd >= 0:
         motor["speed_rpm"] = 0.0
@@ -238,12 +298,16 @@ def _step_segment(s, seg, dt, supply_v):
 
     motor["elect_torque"] = elect_torque
     motor["phase_current"] = current
+    motor["shaft_power_w"] = elect_torque * motor["speed_rpm"] * 2.0 * math.pi / 60.0   # negative = regenerating
 
     # --- Vfd.Step2 (thermal + trip detection), driven by this tick's fresh motor current) ---
     vfd["_motor_current_feedback"] = motor["phase_current"]
     losses_w = 0.02 * vfd["out_v"] * max(0.0, vfd["_motor_current_feedback"])
+    vfd["_motor_power_feedback"] = motor["shaft_power_w"]
     _vfd_thermal_step(vfd, opt, dt, losses_w)
+    _vfd_dc_link_step(vfd, opt, dt)
     _vfd_detect_trips(s, seg)
+    _vfd_update_output_terminals(s, vfd, opt)
 
 
 def _belt_speed(opt, rpm):
@@ -270,6 +334,13 @@ def _move_packages(s, dt):
         if new_pos < opt["length_m"]:
             kept.append([new_pos, mass])
     s["packages"] = kept
+
+
+def set_target_freq(hz):
+    """ConveyorMachine.SetTargetFrequency: new VFD target frequency for every segment."""
+    for seg in _state["segments"]:
+        seg["vfd"]["target_freq"] = hz
+    return None
 
 
 def snapshot():
@@ -311,6 +382,12 @@ def _snapshot(s):
         tags[f"{root}.Vfd.OutputFrequency"] = seg["vfd"]["out_freq"]
         tags[f"{root}.Vfd.OutputVoltage"] = seg["vfd"]["out_v"]
         tags[f"{root}.Vfd.BusVoltage"] = seg["vfd"]["bus_v"]
+        tags[f"{root}.Vfd.BusVoltageNominal"] = seg["vfd"]["vdc_nom"]
+        tags[f"{root}.Vfd.BrakeChopperActive"] = seg["vfd"]["chopper_active"]
+        tags[f"{root}.Vfd.BrakingPowerW"] = seg["vfd"]["braking_power_w"]
+        tags[f"{root}.Vfd.FaultRelay"] = seg["vfd"]["fault_relay"]
+        tags[f"{root}.Vfd.RunningRelay"] = seg["vfd"]["running_relay"]
+        tags[f"{root}.Vfd.AnalogOutFrequency"] = seg["vfd"]["analog_out_frequency"]
         tags[f"{root}.Vfd.HeatsinkTemp"] = seg["vfd"]["heatsink_temp"]
         tags[f"{root}.Motor.SpeedRpm"] = seg["motor"]["speed_rpm"]
         tags[f"{root}.Motor.PhaseCurrent"] = seg["motor"]["phase_current"]
