@@ -13,4 +13,5 @@ public class InductionMotorOutputs
 {
     // Outputs back to VFD
     public DoubleBindable PhaseCurrent { get; } = new();  // A (rms estimate)
+    public DoubleBindable ShaftPowerW { get; } = new();   // W, electromagnetic torque x speed; negative while regenerating
 }

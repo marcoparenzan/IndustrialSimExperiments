@@ -45,6 +45,41 @@ public sealed class ConveyorParityTests
             python.Step(Dt);
         }
 
+        AssertSameValues(csharp, python);
+    }
+
+    // Stopping the belt makes the motors regenerate: exercises the negative-slip torque, the DC-link energy model and the brake chopper.
+    [Theory]
+    [InlineData(10, 0, "")]            // gentle default ramp: no trip
+    [InlineData(300, 0, "OverVoltage")] // fast ramp, no braking resistor: bus overvoltage trip
+    [InlineData(300, 40, "")]          // fast ramp with a braking resistor: rides through
+    public void BothMachines_StayInStep_WhenTheBeltIsStopped(double decelHzPerSecond, double resistorOhms, string expectedTrip)
+    {
+        var options = Options();
+        options.VfdDecelHzPerSecond = decelHzPerSecond;
+        options.VfdBrakingResistorOhms = resistorOhms;
+        var csharp = new ConveyorMachine(options);
+        var python = new ConveyorPySharpMachine(options);
+
+        for (int i = 0; i < 1500; i++) { csharp.Step(Dt); python.Step(Dt); }
+        csharp.SetTargetFrequency(0);
+        python.SetTargetFrequency(0);
+        bool chopperSeen = false;
+        for (int i = 0; i < 300; i++)
+        {
+            csharp.Step(Dt);
+            python.Step(Dt);
+            chopperSeen |= (bool)python.Tags.Single(t => t.Path == "Segments.Segment0.Vfd.BrakeChopperActive").Value!;
+            if (i % 5 == 0) AssertSameValues(csharp, python);   // the transient matters, not only the end state
+        }
+
+        AssertSameValues(csharp, python);
+        Assert.Equal(expectedTrip, (string)python.Tags.Single(t => t.Path == "Machine.ActiveTrip").Value!);
+        Assert.Equal(resistorOhms > 0, chopperSeen);
+    }
+
+    private static void AssertSameValues(ConveyorMachine csharp, ConveyorPySharpMachine python)
+    {
         Assert.Equal(csharp.SimulationTime, python.SimulationTime, 6);
         var pythonTags = python.Tags.ToDictionary(t => t.Path);
         var differences = new List<string>();

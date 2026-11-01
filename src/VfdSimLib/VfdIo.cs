@@ -6,6 +6,7 @@ public class VfdInputs
 {
     // Feedback from motor to the VFD
     public DoubleBindable MotorCurrentFeedback { get; } = new();  // A (rms)
+    public DoubleBindable MotorPowerFeedback { get; } = new();    // W, motor shaft power; negative = regenerating into the DC link
 
     // Grid/supply inputs
     public DoubleBindable SupplyVoltageLL { get; } = new();   // V (rms L-L)

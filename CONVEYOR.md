@@ -52,7 +52,7 @@ Three-phase supply — `NominalVoltageLL` 400 V, `NominalFrequency` 50 Hz, slews
 
 VFD (per segment; background and model coverage in [docs/vfd/VFD.md](docs/vfd/VFD.md)) — rated 400 V / 50 Hz, `Accel`/`Decel` 10 Hz/s, `VoltBoost` 7% at low speed (V/f + boost curve), heatsink thermal RC (`ThermalTimeConstant` 40 s, ambient 25 °C, trip above 85 °C), DC bus voltage sags from √2·V_LL at no load to 1.35·V_LL at full current (`BusFullLoadFactor`) and trips on under/over-voltage (0.55/1.20 × `VdcNom` = √2·rated V_LL), over-current (1.6× `MaxCurrent`=30 A), or ground fault/phase-loss anomalies.
 
-Induction motor (per segment) — ~7.5 kW / 1440 rpm rated, 2 pole pairs, inertia 0.20 kg·m², nominal slip 3%, torque capped at 2.2× rated. Speed comes from net torque (electromagnetic − load) over inertia; phase current from torque and the V/f margin.
+Induction motor (per segment) — ~7.5 kW / 1440 rpm rated, 2 pole pairs, inertia 0.20 kg·m², nominal slip 3%, torque capped at 2.2× rated. Speed comes from net torque (electromagnetic − load) over inertia, integrated semi-implicitly so the stiff slip law stays stable at low drive frequency; phase current from torque and the V/f margin. When the rotor runs faster than the field (slip < 0, e.g. while the drive decelerates) the torque is negative and `ShaftPowerW` is negative: the motor regenerates into the VFD.
 
 Package — a mass sampled once at spawn (`PackageMassKg`, clamped 0.5–20 kg by `PackageSimLib.Package`'s constructor) and a belt position that advances with whichever segment it's currently on.
 
@@ -82,6 +82,8 @@ ConstLoadTorque = BaseLoadTorque (3 Nm, fixed) + T_package
 | `GearRatio` | 12 | Motor-shaft-to-pulley gear reduction |
 | `MechanicalEfficiency` | 0.9 | Drivetrain efficiency used in the load-torque reflection |
 | `RollingCoefficient` | 0.03 | Belt rolling-resistance coefficient |
+| `VfdDecelHzPerSecond` | 10 | VFD deceleration ramp (Hz/s) |
+| `VfdBrakingResistorOhms` | 0 | Braking resistor on the DC link; 0 = none fitted (no brake chopper) |
 
 ## Exposed tags (`SimulationTag` paths, protocol-neutral)
 
@@ -91,9 +93,12 @@ Packages.Count                                   Packages.Positions (array)
 Packages.Masses (array)
 Segments.Segment{i}.Vfd.OutputFrequency          Segments.Segment{i}.Vfd.OutputVoltage
 Segments.Segment{i}.Vfd.BusVoltage               Segments.Segment{i}.Vfd.BusVoltageNominal
-Segments.Segment{i}.Vfd.HeatsinkTemp
+Segments.Segment{i}.Vfd.HeatsinkTemp           Segments.Segment{i}.Vfd.BrakeChopperActive (bool)
+Segments.Segment{i}.Vfd.BrakingPowerW
 Segments.Segment{i}.Motor.SpeedRpm               Segments.Segment{i}.Motor.PhaseCurrent
 ```
+
+Both machines also have `SetTargetFrequency(hertz)` (e.g. `0` stops the belt). Regeneration: a fast stop (high `VfdDecelHzPerSecond`) charges the DC link; without a braking resistor the VFD trips on `OverVoltage`, with one the brake chopper switches on above 1.15 × `VdcNom` and off below 1.10 ×.
 
 `i` ranges `0..SegmentCount-1`. `ConveyorPySharpMachine` exposes two more: `Machine.Running` (bool) and `Machine.ActiveTrip` (string, empty when no trip is active) — see below. Every protocol adapter (OPC UA, MQTT, the console dashboard) maps these same paths onto its own wire format with no Conveyor-specific code — see README's per-protocol sections for exactly how.
 

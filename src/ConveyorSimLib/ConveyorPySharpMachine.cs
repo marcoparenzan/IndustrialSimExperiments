@@ -17,6 +17,7 @@ public sealed class ConveyorPySharpMachine : IMachineModule
     private readonly PyEngine engine;
     private readonly object initFn;
     private readonly object stepFn;
+    private readonly object setTargetFreqFn;
     private readonly IReadOnlyCollection<SimulationTag> tags;
     private Dictionary<string, object?> lastTags;
     private double simulationTime;
@@ -39,10 +40,12 @@ public sealed class ConveyorPySharpMachine : IMachineModule
 
         if (!module.Dict.TryGet("init", out var initFnObj) ||
             !module.Dict.TryGet("step", out var stepFnObj) ||
-            !module.Dict.TryGet("snapshot", out var snapshotFnObj))
-            throw new InvalidOperationException("conveyor_machine.py is missing init/step/snapshot.");
+            !module.Dict.TryGet("snapshot", out var snapshotFnObj) ||
+            !module.Dict.TryGet("set_target_freq", out var setTargetFreqFnObj))
+            throw new InvalidOperationException("conveyor_machine.py is missing init/step/snapshot/set_target_freq.");
         initFn = initFnObj;
         stepFn = stepFnObj;
+        setTargetFreqFn = setTargetFreqFnObj;
 
         // Interp.Call does not marshal raw CLR scalars the way PyEngine.Run's Globals dict does —
         // a boxed System.Int32 doesn't match the interpreter's own BigInteger-shaped Python int, so
@@ -55,6 +58,7 @@ public sealed class ConveyorPySharpMachine : IMachineModule
             ClrMarshal.ToPython(options.PackageMassKg), ClrMarshal.ToPython(options.PulleyRadiusMeters),
             ClrMarshal.ToPython(options.GearRatio), ClrMarshal.ToPython(options.MechanicalEfficiency),
             ClrMarshal.ToPython(options.RollingCoefficient),
+            ClrMarshal.ToPython(options.VfdDecelHzPerSecond), ClrMarshal.ToPython(options.VfdBrakingResistorOhms),
         });
 
         lastTags = ToTagDict(engine.Interp.Call(snapshotFnObj, []));
@@ -72,6 +76,13 @@ public sealed class ConveyorPySharpMachine : IMachineModule
 
         lastTags = ToTagDict(engine.Interp.Call(stepFn, [ClrMarshal.ToPython(deltaTimeSeconds)]));
         simulationTime = ReadDouble("__time__");
+    }
+
+    /// <summary>Changes the target frequency of every segment's VFD (e.g. 0 to stop the belt).</summary>
+    public void SetTargetFrequency(double hertz)
+    {
+        if (!double.IsFinite(hertz) || hertz < 0) throw new ArgumentOutOfRangeException(nameof(hertz));
+        engine.Interp.Call(setTargetFreqFn, [ClrMarshal.ToPython(hertz)]);
     }
 
     private static Dictionary<string, object?> ToTagDict(object pyResult) =>
@@ -99,6 +110,8 @@ public sealed class ConveyorPySharpMachine : IMachineModule
             result.Add(SimulationTag.Create($"{root}.Vfd.OutputVoltage", () => ReadDouble($"{root}.Vfd.OutputVoltage")));
             result.Add(SimulationTag.Create($"{root}.Vfd.BusVoltage", () => ReadDouble($"{root}.Vfd.BusVoltage")));
             result.Add(SimulationTag.Create($"{root}.Vfd.BusVoltageNominal", () => ReadDouble($"{root}.Vfd.BusVoltageNominal")));
+            result.Add(SimulationTag.Create($"{root}.Vfd.BrakeChopperActive", () => (bool)lastTags[$"{root}.Vfd.BrakeChopperActive"]!));
+            result.Add(SimulationTag.Create($"{root}.Vfd.BrakingPowerW", () => ReadDouble($"{root}.Vfd.BrakingPowerW")));
             result.Add(SimulationTag.Create($"{root}.Vfd.HeatsinkTemp", () => ReadDouble($"{root}.Vfd.HeatsinkTemp")));
             result.Add(SimulationTag.Create($"{root}.Motor.SpeedRpm", () => ReadDouble($"{root}.Motor.SpeedRpm")));
             result.Add(SimulationTag.Create($"{root}.Motor.PhaseCurrent", () => ReadDouble($"{root}.Motor.PhaseCurrent")));

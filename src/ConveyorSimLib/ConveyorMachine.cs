@@ -47,6 +47,13 @@ public sealed class ConveyorMachine : IMachineModule
     public IReadOnlyCollection<SimulationTag> Tags => tags;
     public int PackageCount => packages.Count;
 
+    /// <summary>Changes the target frequency of every segment's VFD (e.g. 0 to stop the belt).</summary>
+    public void SetTargetFrequency(double hertz)
+    {
+        if (!double.IsFinite(hertz) || hertz < 0) throw new ArgumentOutOfRangeException(nameof(hertz));
+        foreach (var segment in segments) segment.VfdState.TargetFrequency.Set(hertz);
+    }
+
     public void Step(double deltaTimeSeconds)
     {
         if (!double.IsFinite(deltaTimeSeconds) || deltaTimeSeconds <= 0)
@@ -77,6 +84,7 @@ public sealed class ConveyorMachine : IMachineModule
 
             segment.Motor.Step(deltaTimeSeconds, simState);
             segment.VfdInputs.MotorCurrentFeedback.Set(segment.MotorOutputs.PhaseCurrent);
+            segment.VfdInputs.MotorPowerFeedback.Set(segment.MotorOutputs.ShaftPowerW);
             segment.Vfd.Step2(deltaTimeSeconds, simState);
         }
 
@@ -85,7 +93,7 @@ public sealed class ConveyorMachine : IMachineModule
 
     private ConveyorSegment CreateSegment(int index, double length)
     {
-        var vfdSettings = new VfdSettings();
+        var vfdSettings = new VfdSettings { Decel = options.VfdDecelHzPerSecond, BrakingResistorOhms = options.VfdBrakingResistorOhms };
         var vfdState = new VfdState();
         vfdState.TargetFrequency.Set(options.TargetFrequencyHz);
         vfdState.VdcNom.Set(Math.Sqrt(2) * vfdSettings.RatedVoltageLL);
@@ -152,6 +160,8 @@ public sealed class ConveyorMachine : IMachineModule
             result.Add(SimulationTag.Create($"{root}.Vfd.OutputVoltage", () => segment.VfdOutputs.OutputVoltage.Value));
             result.Add(SimulationTag.Create($"{root}.Vfd.BusVoltage", () => segment.VfdState.BusVoltage.Value));
             result.Add(SimulationTag.Create($"{root}.Vfd.BusVoltageNominal", () => segment.VfdState.VdcNom.Value));
+            result.Add(SimulationTag.Create($"{root}.Vfd.BrakeChopperActive", () => segment.VfdState.BrakeChopperActive.Value));
+            result.Add(SimulationTag.Create($"{root}.Vfd.BrakingPowerW", () => segment.VfdState.BrakingPowerW.Value));
             result.Add(SimulationTag.Create($"{root}.Vfd.HeatsinkTemp", () => segment.VfdState.HeatsinkTemp.Value));
             result.Add(SimulationTag.Create($"{root}.Motor.SpeedRpm", () => segment.MotorState.SpeedRpm.Value));
             result.Add(SimulationTag.Create($"{root}.Motor.PhaseCurrent", () => segment.MotorOutputs.PhaseCurrent.Value));

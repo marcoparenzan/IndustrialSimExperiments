@@ -99,14 +99,16 @@ Source: `src/VfdSimLib` (C#) and the matching section of `src/ConveyorSimLib/Scr
 | V/f law with voltage boost | Modelled | `Vfd.Step` (`VoltBoost`, `RatedFrequency`) | |
 | Operation above base frequency (field weakening) | Simplified: voltage is clamped at the rated value | `Vfd.Step` | |
 | DC bus voltage | Modelled (static): `V_LL · (√2 − (√2 − 1.35) · I/I_max)`, i.e. 566 V at no load and 540 V at full current for 400 V; trip thresholds are relative to `VdcNom` | `Vfd.Step`, `VfdSettings.BusFullLoadFactor`, `VfdState.VdcNom`; tag `Vfd.BusVoltageNominal` | |
-| DC link capacitance, ripple, dynamics of the bus | Not modelled (the bus follows the load instantly) | | S3b (capacitance, needed for regeneration) |
+| DC link capacitance and energy | Modelled for regeneration only: excess energy `E` raises the bus to `√(V² + 2E/C)` (`C` = 2 mF); the load-dependent level itself still follows the load instantly; ripple not modelled | `Vfd.DcLinkStep`, `VfdSettings.DcLinkCapacitanceF`, `VfdState.BusExcessEnergyJ` | |
 | Heatsink temperature (first-order RC) | Modelled | `Vfd.ThermalStep` | |
 | Cooling fan and its failure | Not modelled | | S3d (optional) |
 | Under/over-voltage trips | Modelled | `Vfd.DetectTrips`, `VfdFaultCode` | |
 | Overcurrent trip | Modelled | `Vfd.DetectTrips` (`OverCurrentMultiple × MaxCurrent`) | |
 | Overtemperature trip | Modelled | `Vfd.DetectTrips` | |
 | Ground fault, phase loss | Modelled as injected anomalies | `VfdState.An_GroundFault`, `An_PhaseLoss` | |
-| Regeneration, brake chopper and resistor | Not modelled | | S3b |
+| Regenerative motor operation | Modelled: negative slip gives negative torque and negative `ShaftPowerW`, fed to the drive as `MotorPowerFeedback` | `InductionMotor.Step`, `VfdInputs.MotorPowerFeedback` | |
+| Brake chopper and braking resistor | Modelled: on above 1.15 × `VdcNom`, off below 1.10 ×, dissipates `V²/R`; without a resistor a fast stop trips `OverVoltage` | `Vfd.DcLinkStep`, `VfdSettings.BrakingResistorOhms`; tags `Vfd.BrakeChopperActive`, `Vfd.BrakingPowerW` | |
+| Deceleration stall prevention (drive extends the ramp instead of tripping) | Not modelled | | OPENPOINTS |
 | Digital inputs, analog reference, relay and analog outputs | Not modelled; the target frequency is a single setting | `VfdState.TargetFrequency` | S3c |
 | Reverse rotation | Not modelled | | S3c (only if the motor model supports it) |
 | Harmonics, THD | Not modelled | | S3d (indicator only) |

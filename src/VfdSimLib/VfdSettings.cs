@@ -16,5 +16,10 @@ public class VfdSettings
     public double OverCurrentMultiple { get; set; } = 1.6; // I_trip = multiple * MaxCurrent
     public double UnderVoltPUNomDC { get; set; } = 0.55;   // trip if Vdc < 0.55 * Vdc_nom
     public double BusFullLoadFactor { get; set; } = 1.35; // Vdc / V_LL at full load (six-pulse diode bridge average); at no load Vdc = sqrt(2) * V_LL
+    public double DcLinkCapacitanceF { get; set; } = 2.0e-3;   // F, energy storage that regenerated power charges
+    public double BrakingResistorOhms { get; set; } = 0.0;     // ohm, 0 = no braking resistor fitted (no brake chopper)
+    public double BrakeChopperOnPU { get; set; } = 1.15;       // chopper switches on above this multiple of VdcNom
+    public double BrakeChopperOffPU { get; set; } = 1.10;      // ... and off again below this one (hysteresis)
+    public double BusDischargeTimeConstant { get; set; } = 0.1; // s, bleed of excess bus energy through inverter/motor losses
     public double OverVoltPUNomDC { get; set; } = 1.20;   // trip if Vdc > 1.20 * Vdc_nom
 }
