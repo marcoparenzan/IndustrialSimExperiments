@@ -1,10 +1,16 @@
 namespace UaCourse.Web.Modules;
 
+public static class ScreenSources
+{
+    public const string Course = "course";       // the course server (default): Reactor1 commands, events, recipes
+    public const string ForgeSim = "forgesim";   // ForgeSimApp's OPC UA server: read-only tags, labels are tag paths
+}
 public record SignalLabel(string Node, string Caption, string Unit, double X, double Y, string Format = "F1");
 public record ScreenCommand(string Caption, string Method, double X, double Y);
 public record ScreenDefinition(string Id, string Title, string Description, string Background, IReadOnlyList<SignalLabel> Labels)
 {
     public IReadOnlyList<ScreenCommand> Commands { get; init; } = [];
+    public string Source { get; init; } = ScreenSources.Course;
 }
 
 public sealed class ScreenCatalog
@@ -35,6 +41,24 @@ public sealed class ScreenCatalog
             new("Reactor1.Temperature", "Temperature", "°C", 50, 45),
             new("Reactor1.Setpoint", "Setpoint", "°C", 76, 25),
             new("Reactor1.Running", "Running", "", 24, 25)
-        ]) { Commands = [new("Start", "Start", 24, 55), new("Stop", "Stop", 76, 55)] }
+        ]) { Commands = [new("Start", "Start", 24, 55), new("Stop", "Stop", 76, 55)] },
+        new("vfd", "VFD drive", "Live values of a conveyor segment's drive, read from ForgeSimApp · schematic drawn for this course", "/screens/vfd.svg",
+        [
+            new("Supply.LineLineVoltage", "Supply V LL", "V", 11.5, 57),
+            new("Supply.Frequency", "Supply f", "Hz", 11.5, 67),
+            new("Segments.Segment0.Vfd.BusVoltage", "DC bus", "V", 53.5, 57),
+            new("Segments.Segment0.Vfd.BusVoltageNominal", "Nominal bus", "V", 53.5, 64),
+            new("Segments.Segment0.Vfd.OutputFrequency", "Output f", "Hz", 75.5, 57),
+            new("Segments.Segment0.Vfd.OutputVoltage", "Output V", "V", 75.5, 67),
+            new("Segments.Segment0.Vfd.HeatsinkTemp", "Heatsink", "°C", 75.5, 22),
+            new("Segments.Segment0.Motor.SpeedRpm", "Speed", "rpm", 90, 22, "F0"),
+            new("Segments.Segment0.Motor.PhaseCurrent", "Current", "A", 90, 57),
+            new("Segments.Segment0.Vfd.BrakeChopperActive", "Brake chopper", "", 53.5, 88),
+            new("Segments.Segment0.Vfd.BrakingPowerW", "Braking power", "W", 53.5, 95, "F0"),
+            new("Segments.Segment0.Vfd.FaultRelay", "Fault relay", "", 11.5, 93),
+            new("Segments.Segment0.Vfd.RunningRelay", "Running relay", "", 24, 93),
+            new("Segments.Segment0.Vfd.AnalogOutFrequency", "AFM output", "V", 37, 93),
+            new("Machine.ActiveTrip", "Active trip", "", 75.5, 93)
+        ]) { Source = ScreenSources.ForgeSim }
     ];
 }

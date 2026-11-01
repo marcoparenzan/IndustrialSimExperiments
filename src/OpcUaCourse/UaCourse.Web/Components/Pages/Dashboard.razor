@@ -5,6 +5,7 @@
 @using UaCourse.Web.Services
 @inject ScreenCatalog Catalog
 @inject UaConnection Connection
+@inject SignalSources Sources
 
 <PageTitle>@(selected?.Title ?? "Dashboard not found") · UA Lab</PageTitle>
 @if (selected is null)
@@ -15,10 +16,12 @@ else
 {
 <header class="course-header">
     <div><a class="breadcrumb" href="/">Labs /</a><h1>@selected.Title</h1><p>@selected.Description</p></div>
-    <span class="connection @(Connection.Connected ? "online" : "offline")">@Connection.Status</span>
+    <span class="connection @(Sources.For(selected).Connected ? "online" : "offline")">@Sources.For(selected).Status</span>
 </header>
 <div class="workspace">
     <section class="canvas-panel"><h2>@selected.Title</h2><p>@selected.Description</p><p class="canvas-help">On small screens scroll the diagram horizontally to keep the values readable.</p><Synoptic Screen="selected" Busy="@(busy || !interactive)" CommandRequested="RunScreenCommand" /></section>
+    @if (selected.Source == ScreenSources.Course)
+    {
     <aside class="control-panel">
         <p class="eyebrow">MODEL / REACTOR1</p><h2>Commands and recipes</h2>
         <p>The reactor controls the simulated run state and the water plant totalizer.</p>
@@ -37,11 +40,23 @@ else
         <output aria-live="polite" class="command-result">@result</output>
         <p class="fine-print">Labels come from OPC UA MonitoredItems. Hover over a value to see NodeId, quality and timestamp.</p>
     </aside>
+    }
+    else
+    {
+    <aside class="control-panel">
+        <p class="eyebrow">READ ONLY / FORGESIMAPP</p><h2>Live data</h2>
+        <p>This screen shows tags published by ForgeSimApp. They are read-only: the simulator accepts no writes or commands over OPC UA.</p>
+        <p class="fine-print">Start the simulator with <code>dotnet run --project src/ForgeSimApp -- --protocols OpcUa</code>. Hover over a value to see the tag path, quality and timestamp. See lesson 19.</p>
+    </aside>
+    }
 </div>
+@if (selected.Source == ScreenSources.Course)
+{
 <section class="event-panel"><h2>Process events <span>BaseEventType / Publish</span></h2>
     @if (Connection.Events.Count == 0) { <p>Waiting for OPC UA events…</p> }
     @foreach (var ev in Connection.Events.Reverse().Take(8)) { <div class="event-row">@ev</div> }
 </section>
+}
 }
 
 @code {

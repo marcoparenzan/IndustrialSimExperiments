@@ -24,7 +24,7 @@ const path = require('node:path');
         neutral: !document.querySelector('.synoptic, .control-panel, input'),
         backgroundsLoaded: [...document.querySelectorAll('.card-preview img')].every(img => img.complete && img.naturalWidth > 0)
       }));
-      if (home.links !== 2 || !home.neutral || !home.backgroundsLoaded) throw new Error('Invalid home: ' + JSON.stringify(home));
+      if (home.links !== 3 || !home.neutral || !home.backgroundsLoaded) throw new Error('Invalid home: ' + JSON.stringify(home));
       results.push({ width, screen: 'Home', ...home, overlaps: [], backgroundLoaded: home.backgroundsLoaded });
       await page.screenshot({ path: path.join(folder, `${process.argv[4] || 'layout'}-${width}-home.png`), fullPage: true });
       await page.locator('.dashboard-directory a[href="/dashboards/water"]').click();

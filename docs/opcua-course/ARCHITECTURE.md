@@ -27,7 +27,9 @@ The simulation lives in the server, not in the browser. A label does not generat
 | `UaCourse/Models/RecipeNodeModel.cs` | Public type, encoding, LoadRecipe and partial NodeSet2 export |
 | `UaCourse.DynamicClient` | Independent dynamic decoder, with no reference to the server DLL |
 | `UaCourse.Web/Modules/ScreenCatalog.cs` | Declarative catalog of screens and bindings |
-| `UaCourse.Web/Services/UaConnection.cs` | Shared session, monitored items, events, retry and commands |
+| `UaCourse.Web/Services/UaConnection.cs` | Shared session, monitored items, events, retry and commands (course screens only) |
+| `UaCourse.Web/Services/ForgeSimConnection.cs` | Second, read-only session to `ForgeSimApp` (SecurityMode None); namespace found by URI prefix, labels resolved by browse path, same retry policy |
+| `UaCourse.Web/Services/ISignalSource.cs` | `ISignalSource` (what a synoptic reads) and `SignalSources`, which picks the connection for a screen from `ScreenDefinition.Source` |
 | `UaCourse.Web/Components/Synoptic.razor` | Background and percentage labels, quality and timestamp |
 | `UaCourse.Web/Components/Pages/Home.razor` | Neutral index and dashboard links generated from the catalog |
 | `UaCourse.Web/Components/Layout/MainLayout.razor` | UA Lab template and shared navigation generated from the catalog |
@@ -36,6 +38,8 @@ The simulation lives in the server, not in the browser. A label does not generat
 The projects live under `src/OpcUaCourse/`. The web app references the console project to reuse configuration and helpers. This is an explicit simplification of the first version; extracting a `UaCourse.Protocol` library is the next step when the modules grow. The boundaries are already expressed by classes and namespaces.
 
 ## Navigation and template
+
+A `ScreenDefinition` has a `Source`: `course` (default) reads the course server through `UaConnection` and has commands and events; `forgesim` reads `ForgeSimApp` through `ForgeSimConnection`, is read-only and shows a note instead of the command panel. The two connections are independent: if one server is down, the other screens keep working.
 
 The home page (`/` and `/dashboards`) uses static rendering; `/dashboards/{ScreenId}` uses Interactive Server and resolves the screen in the catalog. The routes also work with direct access and reload. An unknown ID produces an explicit view without a synoptic. `course.css` defines the local template with no external UI dependencies. Adding a screen to the catalog updates the home page and the menu without changing the pages. The UA session remains a shared service of the application, active even when the browser shows the home page.
 

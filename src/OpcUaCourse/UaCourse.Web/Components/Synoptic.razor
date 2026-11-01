@@ -2,15 +2,15 @@
 @using Opc.Ua
 @using UaCourse.Web.Modules
 @using UaCourse.Web.Services
-@inject UaConnection Connection
+@inject SignalSources Sources
 
 <div class="synoptic-viewport" tabindex="0" role="region" aria-label="Synoptic @Screen.Title, horizontal scrolling" >
 <div class="synoptic" role="group" aria-label="@Screen.Title">
     <img src="@Screen.Background" alt="Functional diagram @Screen.Title" />
     @foreach (var label in Screen.Labels)
     {
-        var signal = Connection.Get(label.Node);
-        var good = Connection.Connected && signal is not null && StatusCode.IsGood(signal.Quality);
+        var signal = Source.Get(label.Node);
+        var good = Source.Connected && signal is not null && StatusCode.IsGood(signal.Quality);
         <div class="signal @(good ? "good" : "bad")" style="left:@(label.X.ToString(CultureInfo.InvariantCulture))%;top:@(label.Y.ToString(CultureInfo.InvariantCulture))%" title="@Detail(label, signal)">
             <span>@label.Caption</span>
             <strong>@Value(label, signal) <small>@label.Unit</small></strong>
@@ -18,7 +18,7 @@
     }
     @foreach (var command in Screen.Commands)
     {
-        <button class="hotspot" disabled="@(!Connection.Connected || Busy)" style="left:@(command.X.ToString(CultureInfo.InvariantCulture))%;top:@(command.Y.ToString(CultureInfo.InvariantCulture))%" @onclick="() => CommandRequested.InvokeAsync(command)">@command.Caption</button>
+        <button class="hotspot" disabled="@(!Source.Connected || Busy)" style="left:@(command.X.ToString(CultureInfo.InvariantCulture))%;top:@(command.Y.ToString(CultureInfo.InvariantCulture))%" @onclick="() => CommandRequested.InvokeAsync(command)">@command.Caption</button>
     }
 </div>
 </div>
@@ -27,7 +27,8 @@
     [Parameter, EditorRequired] public ScreenDefinition Screen { get; set; } = null!;
     [Parameter] public EventCallback<ScreenCommand> CommandRequested { get; set; }
     [Parameter] public bool Busy { get; set; }
-    private string Value(SignalLabel label, SignalValue? signal) => !Connection.Connected || signal is null ? "—" : signal.Value switch
+    private ISignalSource Source => Sources.For(Screen);
+    private string Value(SignalLabel label, SignalValue? signal) => !Source.Connected || signal is null ? "—" : signal.Value switch
     {
         double number => number.ToString(label.Format, CultureInfo.CurrentCulture),
         bool state => state ? "ON" : "OFF", _ => signal.Value?.ToString() ?? "—"

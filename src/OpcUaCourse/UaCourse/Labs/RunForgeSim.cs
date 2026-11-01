@@ -25,17 +25,9 @@ public static partial class Lessons
 
     private static async Task RunForgeSimAsync(Session session)
     {
-        // 1. The namespace URI is urn:IndustrialSim:<machine name>; never assume the index (lesson 03).
-        var namespaceUri = session.NamespaceUris.ToArray().FirstOrDefault(uri => uri.StartsWith(ForgeSimNamespacePrefix, StringComparison.Ordinal));
-        Require(namespaceUri is not null, $"ForgeSim namespace found ({namespaceUri})");
-        var ns = (ushort)session.NamespaceUris.GetIndex(namespaceUri);
-
-        // 2. The machine is one folder under Objects, in that namespace.
-        session.Browse(null, null, ObjectIds.ObjectsFolder, 0, BrowseDirection.Forward,
-            ReferenceTypeIds.HierarchicalReferences, true, 0, out _, out var objects);
-        var machine = objects.FirstOrDefault(reference => reference.BrowseName.NamespaceIndex == ns);
-        Require(machine is not null, $"Machine folder under Objects: {machine?.DisplayName}");
-        var machineId = ExpandedNodeId.ToNodeId(machine!.NodeId, session.NamespaceUris);
+        // 1-2. The namespace URI is urn:IndustrialSim:<machine name> (never assume the index, lesson 03); the machine is one folder under Objects.
+        var (ns, machineId) = FindForgeSimMachine(session);
+        Require(true, $"ForgeSim namespace and machine folder found ({session.NamespaceUris.GetString(ns)})");
 
         // 3. Every simulation tag path "A.B.C" became folders A/B and a variable C.
         var vfdFolder = ResolveForgeSimPath(session, machineId, ns, "Segments/Segment0/Vfd");
@@ -90,10 +82,24 @@ public static partial class Lessons
         Console.WriteLine("Compare with the course server (lesson 05) and try the VfdType exercise of lesson 19.");
     }
 
-    private static NodeId ResolveForgeSimPath(Session session, NodeId start, ushort ns, string path)
+    /// <summary>Finds the ForgeSim namespace (by URI prefix) and the machine folder under Objects.</summary>
+    public static (ushort Namespace, NodeId Machine) FindForgeSimMachine(Session session)
+    {
+        var namespaceUri = session.NamespaceUris.ToArray().FirstOrDefault(uri => uri.StartsWith(ForgeSimNamespacePrefix, StringComparison.Ordinal))
+            ?? throw new InvalidOperationException($"No namespace starting with {ForgeSimNamespacePrefix}: is this a ForgeSimApp server?");
+        var ns = (ushort)session.NamespaceUris.GetIndex(namespaceUri);
+        session.Browse(null, null, ObjectIds.ObjectsFolder, 0, BrowseDirection.Forward,
+            ReferenceTypeIds.HierarchicalReferences, true, 0, out _, out var objects);
+        var machine = objects.FirstOrDefault(reference => reference.BrowseName.NamespaceIndex == ns)
+            ?? throw new InvalidOperationException("ForgeSim machine folder not found under Objects.");
+        return (ns, ExpandedNodeId.ToNodeId(machine.NodeId, session.NamespaceUris));
+    }
+
+    /// <summary>Resolves a tag path ("Segments.Segment0.Vfd.BusVoltage" or "Segments/Segment0/Vfd/BusVoltage") below the machine folder.</summary>
+    public static NodeId ResolveForgeSimPath(Session session, NodeId start, ushort ns, string path)
     {
         var relative = new RelativePath();
-        foreach (var name in path.Split('/'))
+        foreach (var name in path.Split('/', '.'))
             relative.Elements.Add(new RelativePathElement
             { ReferenceTypeId = ReferenceTypeIds.HierarchicalReferences, IsInverse = false, IncludeSubtypes = true, TargetName = new QualifiedName(name, ns) });
         session.TranslateBrowsePathsToNodeIds(null, new BrowsePathCollection { new BrowsePath { StartingNode = start, RelativePath = relative } },

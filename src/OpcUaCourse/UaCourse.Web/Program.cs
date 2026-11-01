@@ -16,6 +16,9 @@ builder.Logging.AddConsole();
 builder.Services.AddSingleton<ScreenCatalog>();
 builder.Services.AddSingleton<UaConnection>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UaConnection>());
+builder.Services.AddSingleton<ForgeSimConnection>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ForgeSimConnection>());
+builder.Services.AddSingleton<SignalSources>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

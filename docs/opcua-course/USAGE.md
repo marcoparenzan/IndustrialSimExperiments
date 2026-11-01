@@ -14,6 +14,12 @@ The Start/Stop commands are also available as hotspots on the background, descri
 
 The home page is also available at `/dashboards` and contains no live values or commands. Every dashboard can be opened directly or reloaded. An unknown identifier shows "Dashboard not found" with a link back to the home page. On mobile the sidebar becomes a top navigation; the synoptic keeps its internal horizontal scrolling to preserve legibility.
 
+## VFD drive screen (ForgeSimApp)
+
+`/dashboards/vfd` is fed by a second, read-only connection to the OPC UA server of `ForgeSimApp` (default `opc.tcp://localhost:4840/ForgeSim`; change it with the `ForgeSim:Endpoint` setting, for example `--ForgeSim:Endpoint=opc.tcp://host:4840/ForgeSim`). It shows the supply, DC bus, inverter output, heatsink, motor and relay tags of conveyor segment 0. With the Python conveyor (default) it also shows the active trip; with the C# conveyor that label stays at "—" because `Machine.ActiveTrip` exists only in the Python machine.
+
+If ForgeSimApp is not running, the chip in the header says so and the labels show "—"; the other dashboards keep working. The screen has no commands: ForgeSim's variables are read-only. See [lesson 19](lessons/19-forgesim-vfd.md).
+
 ## Console labs
 
 With the server already running:
@@ -64,5 +70,6 @@ Publish `Line2.Speed` in the NodeManager, add the entry to the Screens property 
 | BadOutOfRange | The target must be finite and between 20 and 90 |
 | Port in use during verify | Stop `server` before starting the verification |
 | Port 4841 in use by something else | Another OPC UA server? `ForgeSimApp` uses 4840, not 4841 |
+| VFD screen says "ForgeSimApp unavailable" | Start `ForgeSimApp` with `--protocols OpcUa`; check that port 4840 is free and that the endpoint matches `ForgeSim:Endpoint` |
 
 `dotnet build src/ForgeIndustrial.slnx --no-restore` builds the whole repository, course included. Private keys and build outputs live outside the repository (artifacts root and the central build output), so Git never sees them. Do not delete the PKI folder while the applications are running.

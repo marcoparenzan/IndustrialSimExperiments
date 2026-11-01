@@ -26,7 +26,7 @@ Open http://localhost:5080. UA endpoint: `opc.tcp://localhost:4841/UaCourse`. St
 
 Certificates (including private keys), the exported NodeSet2 and the ASP.NET keys are written outside the repository: to `%LOCALAPPDATA%\UaCourse`, or to the folder named by the `UACOURSE_ARTIFACTS_ROOT` environment variable. Set the same value for every process of the course.
 
-The home page is a neutral index of the dashboards, with static previews and links. The UA Lab template uses a dark sidebar, light panels and compact navigation on mobile. The dashboards have their own URLs: [water plant](http://localhost:5080/dashboards/water) and [reactor and recipes](http://localhost:5080/dashboards/reactor). The catalog generates both the home cards and the navigation links automatically.
+The home page is a neutral index of the dashboards, with static previews and links. The UA Lab template uses a dark sidebar, light panels and compact navigation on mobile. The dashboards have their own URLs: [water plant](http://localhost:5080/dashboards/water), [reactor and recipes](http://localhost:5080/dashboards/reactor) and [VFD drive](http://localhost:5080/dashboards/vfd), whose values come from `ForgeSimApp` (start it with `dotnet run --project src/ForgeSimApp -- --protocols OpcUa`; the other two dashboards do not need it). The catalog generates both the home cards and the navigation links automatically.
 
 ## The path
 

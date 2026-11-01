@@ -14,6 +14,8 @@ Run on Windows, .NET SDK 11.0.100 (release candidate), OPC UA SDK 1.5.376.244, a
 
 ForgeSim lab (`client forgesim`) against a running `ForgeSimApp` (Python conveyor, OPC UA only): exit code 0; namespace `urn:IndustrialSim:Conveyor (PySharp)` found, five tags read Good, a Write rejected with BadNotWritable, `BusVoltage` 27–32 notifications in 5 s, `OutputFrequency` 1 (constant after the ramp). The same run showed that every node was listed twice in Browse; fixed in `OpcUaServerLib` (10 entries instead of 20).
 
+VFD drive dashboard with `ForgeSimApp`, the course server and the web app running: HTTP 200 on all four pages; the prerendered page reports the ForgeSim endpoint as connected and shows 15 Good labels (supply 400 V / 50 Hz, DC bus 564.1 V against a nominal 565.7 V, output 30 Hz / 268 V, 897 rpm, running relay ON, AFM 6.0 V). After stopping ForgeSimApp the chip reports it unavailable, 0 labels are Good on the VFD page and 20 remain Good on the water page. Screenshots were taken with headless Chromium (some captures failed intermittently; the ones saved were inspected).
+
 Not verified in this run: clicking the commands in the browser, the automated layout runner (`check-layout.cjs`, which needs the Playwright npm package), mobile widths, and the page for an unknown dashboard identifier.
 
 ## Home and template 0.4.0 — 2026-10-05

@@ -8,7 +8,7 @@ namespace UaCourse.Web.Services;
 public record SignalValue(object? Value, StatusCode Quality, DateTime SourceTimestamp);
 
 // One shared connection for the lab; components do not own sessions.
-public sealed class UaConnection(ScreenCatalog catalog, ILogger<UaConnection> logger) : BackgroundService
+public sealed class UaConnection(ScreenCatalog catalog, ILogger<UaConnection> logger) : BackgroundService, ISignalSource
 {
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly ConcurrentDictionary<string, SignalValue> signals = new();
@@ -37,7 +37,7 @@ public sealed class UaConnection(ScreenCatalog catalog, ILogger<UaConnection> lo
                 current.KeepAliveInterval = 2000;
                 subscription = new Subscription(current.DefaultSubscription) { PublishingInterval = 250, KeepAliveCount = 10, LifetimeCount = 100 };
                 current.AddSubscription(subscription); subscription.Create();
-                foreach (var node in catalog.Screens.SelectMany(s => s.Labels).Select(l => l.Node).Distinct())
+                foreach (var node in catalog.Screens.Where(s => s.Source == ScreenSources.Course).SelectMany(s => s.Labels).Select(l => l.Node).Distinct())
                 {
                     var item = new MonitoredItem(subscription.DefaultItem)
                     { StartNodeId = Lessons.Id(current, node), DisplayName = node, AttributeId = Attributes.Value, SamplingInterval = 250, QueueSize = 10, DiscardOldest = true };
