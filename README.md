@@ -76,7 +76,7 @@ Three-phase supply (`ThreePhaseSupplySimLib`)
 - Settings: `NominalVoltageLL`, `NominalFrequency`, slew rates, `UnderVoltPU`/`OverVoltPU`.
 - Behavior: slews outputs toward targets; anomalies (`UnderVoltage`, `OverVoltage`, `FrequencyDrift`) perturb the setpoints.
 
-VFD (`VfdSimLib`)
+VFD (`VfdSimLib`) — concepts, I/O and a model-coverage table in [docs/vfd/VFD.md](docs/vfd/VFD.md); supply-side protection in [docs/vfd/SUPPLY-PROTECTION.md](docs/vfd/SUPPLY-PROTECTION.md)
 
 - Settings: rated voltage/frequency, accel/decel, boost, max current, thermal constants, trip thresholds.
 - Behavior: ramps output frequency to target with V/f + boost; models bus voltage, heatsink thermal RC, and trips on under/over-voltage, over-current, over-temp, phase loss, ground fault.
