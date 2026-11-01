@@ -2,7 +2,7 @@
 
 `ForgeSimApp` is a thin host: `SimulationCommand` (`src/ForgeSimApp/Cli/SimulationCommand.cs`, a Spectre.Console.Cli `AsyncCommand`) reads configuration + CLI options, resolves one `IMachineModule` and a set of `IProtocolAdapter`s from DI, and hands off to `SimulationWorker` (`src/ForgeSimApp/SimulationWorker.cs`), which steps/publishes them in a loop. Neither the host nor the protocol layer knows anything about conveyors specifically — everything machine-specific lives behind `IMachineModule`, and everything protocol-specific lives behind `IProtocolAdapter`. Both contracts live in `src/IndustrialSimLib`.
 
-There's a third, lower layer below both: **devices** (`ThreePhaseSupplySimLib`, `VfdSimLib`, `InductionMotorLib`, `PackageSimLib`, under `/Devices` in `IndustrialSimLib.slnx`) are the individual pieces of physical equipment a machine module composes and steps — a VFD, a motor, a grid supply. A machine module owns instances of these, wires their inputs/outputs to each other, and derives its `SimulationTag`s from their state. Adding a new kind of physical equipment means adding a device; adding a new arrangement of equipment exposed as a runnable simulation means adding a machine module.
+There's a third, lower layer below both: **devices** (`ThreePhaseSupplySimLib`, `VfdSimLib`, `InductionMotorLib`, `PackageSimLib`, under `/Devices` in `ForgeIndustrial.slnx`) are the individual pieces of physical equipment a machine module composes and steps — a VFD, a motor, a grid supply. A machine module owns instances of these, wires their inputs/outputs to each other, and derives its `SimulationTag`s from their state. Adding a new kind of physical equipment means adding a device; adding a new arrangement of equipment exposed as a runnable simulation means adding a machine module.
 
 ## Adding a new device
 
@@ -54,7 +54,7 @@ A device is a standalone physics model with no knowledge of machines, tags, or p
 
    If the device needs to trip (stop the machine on a fault), define a `PressFaultCode : FaultCode` record with static instances (see `VfdFaultCode`) and call `simState.Trip(PressFaultCode.SomeFault)`; check `simState.Running` at the top of `Step` to hold/reset outputs while tripped (see `Vfd.Step`'s early-return branch).
 4. If the device's physics needs a second pass after other devices have produced feedback it depends on, add a second method (by convention `Step2(double dt, ISimState simState)`, not part of `IDeviceSimulator`) — the owning machine module calls it explicitly at the right point in its own loop. `Vfd` does this: `Step` ramps output frequency/voltage using only its own inputs, and `Step2` computes thermal rise and detects trips using `MotorCurrentFeedback`, which only becomes available after the motor has stepped off the VFD's `Step` output. A device with no such cross-dependency only needs `Step`.
-5. Add the project to `src/IndustrialSimLib.slnx` under `/Devices`, and reference it from whichever machine module(s) will use it.
+5. Add the project to `src/ForgeIndustrial.slnx` under `/Devices`, and reference it from whichever machine module(s) will use it.
 6. Add xUnit tests in `IndustrialSim.Tests` mirroring `Vfd_RampsFrequency_AndTripsOnUndervoltage` or `Motor_AcceleratesAndProducesCurrent` — construct settings/state/inputs/outputs, call `Step` (and `Step2` if present) a few times, and assert on the resulting output/state values and, if applicable, `simState.ActiveTrip`.
 
 Not every reusable class needs to be a full device: `Package` (`src/PackageSimLib/Package.cs`) is a plain data entity (mass + position as `Bindable`s) with no `Step` of its own — it's moved and loaded by the machine module that owns it (`ConveyorMachine.MovePackages`). Use this simpler shape for passive entities that don't have independent physics.
@@ -83,7 +83,7 @@ Not every reusable class needs to be a full device: `Package` (`src/PackageSimLi
 
    Build `Tags` once (in the constructor, like `ConveyorMachine.BuildTags`) as a list of `SimulationTag.Create("Path.Segment", () => someBindable.Value)`. Tag paths use `.` as the hierarchy separator — protocol adapters turn that into their own addressing (OPC UA turns it into folders).
 3. Add an `Options` class (e.g. `PalletizerOptions`) if the machine needs configuration, following `ConveyorOptions`.
-4. Add the project to `src/IndustrialSimLib.slnx` under `/Machines`, and add a `ProjectReference` from `ForgeSimApp.csproj`.
+4. Add the project to `src/ForgeIndustrial.slnx` under `/Machines`, and add a `ProjectReference` from `ForgeSimApp.csproj`.
 5. Register it in `src/ForgeSimApp/Cli/SimulationCommand.cs`:
 
    ```csharp
@@ -130,7 +130,7 @@ Not every reusable class needs to be a full device: `Package` (`src/PackageSimLi
    ```
 
    Three reference implementations exist. `OpcUaProtocolAdapter` (`src/OpcUaServerLib/OpcUaProtocolAdapter.cs`) builds an OPC UA address space from `machine.Tags` once in `StartAsync`, then copies `tag.Value` into the corresponding node on every `PublishAsync`. `MqttProtocolAdapter` (`src/MqttServerLib/MqttProtocolAdapter.cs`) maps each tag path to an MQTT topic string and, on every `PublishAsync`, JSON-serializes `tag.Value` and injects a retained message into its embedded `MQTTnet.Server` broker. `ConsoleDashboardProtocolAdapter` (`src/ConsoleDashboardLib/ConsoleDashboardProtocolAdapter.cs`) instead renders `machine.Tags` as rows of a Spectre.Console live table, refreshing on a throttle rather than every tick — and is a useful example of a "protocol" adapter that isn't a network protocol at all, plus of guarding a presentation-layer adapter against non-interactive environments (it no-ops when `AnsiConsole.Profile.Capabilities.Interactive` is false, since Spectre's live display can hang if driven against a redirected/piped stdout). A register-based protocol (Modbus/S7) would instead assign each tag a fixed offset in `StartAsync` and write raw bytes/words in `PublishAsync`.
-3. Add the project under `/Protocols` in `IndustrialSimLib.slnx`, and reference it from `ForgeSimApp.csproj`.
+3. Add the project under `/Protocols` in `ForgeIndustrial.slnx`, and reference it from `ForgeSimApp.csproj`.
 4. Register it as another `IProtocolAdapter` in `src/ForgeSimApp/Cli/SimulationCommand.cs`:
 
    ```csharp
